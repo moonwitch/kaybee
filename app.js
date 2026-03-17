@@ -1,5 +1,7 @@
 // Require modules
-require("dotenv").config();
+require("dotenv").config(); // local dev ;)
+
+const ROOT_ID = process.env.ROOT_FOLDER_ID;
 const express = require("express");
 const hbs = require("hbs");
 const compression = require("compression");
@@ -46,11 +48,15 @@ app.get("/proxy-img", async (req, res) => {
 
 // Warmup logic with minimal, useful logging
 async function warmUpCache() {
+  if (!ROOT_ID) {
+    console.error("❌ ERROR: ROOT_FOLDER_ID is missing from environment variables.");
+    return;
+  }
+  
   try {
-    const categories = await getWikiData(process.env.ROOT_FOLDER_ID);
+    const categories = await getWikiData(ROOT_ID);
     myCache.set("dashboard_data", categories);
-    // Just a heartbeat log
-    console.log(`[${new Date().toISOString()}] Cache refreshed successfully.`);
+    console.log(`[${new Date().toISOString()}] 🔥 Cache warmed using ID: ${ROOT_ID}`);
   } catch (err) {
     // Crucial for debugging production issues
     console.error("CRITICAL: Warmup failed:", err.message);
@@ -71,7 +77,7 @@ app.get("/", async (req, res) => {
       return res.render("index", { categories: cachedDashboard });
     }
 
-    const categories = await getWikiData(process.env.ROOT_FOLDER_ID);
+    const categories = await getWikiData(ROOT_ID);
     res.render("index", { categories });
   } catch (err) {
     console.error("Dashboard Error:", err);
