@@ -1,4 +1,4 @@
-name: Deploy Kaybee
+name: Build || Push || Deploy Cloud
 on:
   push:
     branches: main
@@ -10,6 +10,7 @@ env:
 
 jobs:
   deploy:
+    name: Build && Push && Deploy
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,7 +29,10 @@ jobs:
         with:
           service: ${{ env.SERVICE }}
           region: ${{ env.REGION }}
-          source: ./ 
+          source: ./
           env_vars: |
             ROOT_FOLDER_ID=${{ vars.ROOT_FOLDER_ID }}
             GOOGLE_APPLICATION_CREDENTIALS=service-account.json
+
+      - name: Show me the output
+        run: echo ${{ steps.deploy.outputs.url}}
