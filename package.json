@@ -1,0 +1,19 @@
+{
+  "name": "KayBee",
+  "version": "1.0.0",
+  "description": "Morandi-Brutalist Google Drive Wiki",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "dependencies": {
+    "axios": "^1.13.6",
+    "compression": "^1.8.1",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "googleapis": "^144.0.0",
+    "hbs": "^4.2.0",
+    "node-cache": "^5.1.2"
+  }
+}

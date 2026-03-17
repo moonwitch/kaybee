@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{docName}} // Kaybee</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="article-view">
+
+    <div class="stack-80">
+        <nav class="breadcrumb-nav">
+            <div class="breadcrumb-links">
+                <a href="/" class="home-link">HOME</a>
+                <span class="breadcrumb-separator">/</span>
+                <span class="cat-label">{{categoryName}}</span>
+                <span class="breadcrumb-separator">/</span>
+                <span class="doc-label">{{docName}}</span>
+            </div>
+
+            <div class="nav-actions">
+                <a href="https://docs.google.com/document/d/{{docId}}/edit" target="_blank" class="btn-brutal">
+                    EDIT DOC ↗
+                </a>
+            </div>
+        </nav>
+
+        <main>
+            <article class="google-doc-content">
+                {{{content}}}
+            </article>
+
+            {{#if comments.length}}
+            <section class="comments-section">
+                <h3 class="section-title">Discussion & Feedback</h3>
+                <div class="comments-list">
+                    {{#each comments}}
+                    <div class="comment-card">
+                        <span class="comment-author">{{author.displayName}}</span>
+                        <div class="comment-content">
+                            {{content}}
+                        </div>
+                    </div>
+                    {{/each}}
+                </div>
+            </section>
+            {{/if}}
+        </main>
+
+        <footer class="footer-nav">
+            <a href="/" class="back-dashboard-link">
+                ↑ BACK TO DASHBOARD
+            </a>
+        </footer>
+    </div>
+
+</body>
+</html>

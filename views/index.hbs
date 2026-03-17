@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard // Kaybee</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+    <div class="stack-80">
+        <header>
+            <h1>KAYBEE</h1>
+            <p class="header-subtitle">Internal Knowledge Base // {{categories.length}} Categories</p>
+        </header>
+
+        <section class="search-container">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="wikiSearch" class="search-input" placeholder="SEARCH DOCUMENTS OR TITLES..." onkeyup="filterDocs()">
+        </section>
+
+        <div class="grid" id="categoryGrid">
+          {{#each categories}}
+            <section class="category-section">
+              <div class="category-sidebar">
+                <h2 class="category-title">{{name}}</h2>
+                <span class="doc-count">{{docs.length}} ITEMS</span>
+              </div>
+
+              <div class="docs-list">
+                {{#each docs}}
+                  <a href="/doc/{{id}}" class="doc-link">
+                    <span class="doc-name">{{name}}</span>
+                    <span class="arrow">→</span>
+                  </a>
+                {{/each}}
+              </div>
+            </section>
+          {{#unless @last}}{{/unless}}
+          {{/each}}
+        </div>
+
+        {{#unless categories.length}}
+        <div class="empty-state">
+            <p>No documents found in the root folder.</p>
+        </div>
+        {{/unless}}
+    </div>
+
+    <script>
+    function filterDocs() {
+      const query = document.getElementById('wikiSearch').value.toLowerCase();
+      const sections = document.querySelectorAll('.category-section');
+      sections.forEach(section => {
+        const links = section.querySelectorAll('.doc-link');
+        let hasVisibleDoc = false;
+        links.forEach(link => {
+          if (link.innerText.toLowerCase().includes(query)) {
+            link.style.display = 'flex';
+            hasVisibleDoc = true;
+          } else {
+            link.style.display = 'none';
+          }
+        });
+        section.style.display = hasVisibleDoc ? 'grid' : 'none';
+      });
+    }
+    </script>
+</body>
+</html>

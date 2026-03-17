@@ -1,0 +1,19 @@
+# Dependency directories
+node_modules/
+
+# Environment variables
+.env
+
+# Secrets & Service Accounts
+# Using a wildcard to catch any JSON key files
+*.json
+!package.json
+!package-lock.json
+
+# IDE / System files
+.DS_Store
+.zed/
+.vscode/
+
+# Logs
+npm-debug.log*
