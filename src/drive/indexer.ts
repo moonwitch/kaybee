@@ -8,6 +8,8 @@ const auth = new google.auth.GoogleAuth({
 
 const drive = google.drive({ version: 'v3', auth })
 
+const SHORTCUT_MIME = 'application/vnd.google-apps.shortcut'
+
 export interface DriveEntry {
   id: string
   name: string
@@ -18,9 +20,12 @@ export interface DriveEntry {
 /**
  * Recursively lists every supported Workspace file under `rootFolderId`.
  *
- * Handles both regular folders and Shared Drives. For a Shared Drive root,
- * `driveId` + `corpora: 'drive'` are required — otherwise `'X' in parents`
+ * Handles regular folders, Shared Drives, and shortcuts. For Shared Drives,
+ * driveId + corpora=drive are required — without them, `'X' in parents`
  * silently returns zero items, which is the #1 Shared Drive API gotcha.
+ *
+ * Shortcuts are dereferenced: if the target mime type is supported, the
+ * shortcut becomes an entry pointing at the target file ID.
  */
 export async function listAllFiles(
   rootFolderId: string,
@@ -45,7 +50,8 @@ export async function listAllFiles(
       const response: GaxiosResponse<drive_v3.Schema$FileList> =
         await drive.files.list({
           q: `'${folderId}' in parents and trashed = false`,
-          fields: 'nextPageToken, files(id, name, mimeType, parents)',
+          fields:
+            'nextPageToken, files(id, name, mimeType, parents, shortcutDetails)',
           pageSize: 1000,
           pageToken,
           supportsAllDrives: true,
@@ -56,16 +62,41 @@ export async function listAllFiles(
         })
 
       const files = response.data.files ?? []
+      const mimeCounts: Record<string, number> = {}
+      for (const f of files) {
+        const m = f.mimeType ?? '(none)'
+        mimeCounts[m] = (mimeCounts[m] ?? 0) + 1
+      }
       console.log(
-        `[indexer] folder=${folderId} pageItems=${files.length}`,
+        `[indexer] folder=${folderId} pageItems=${files.length} mimes=${JSON.stringify(mimeCounts)}`,
       )
 
       for (const file of files) {
         if (!file.id || !file.mimeType) continue
+
         if (file.mimeType === MIME.folder) {
           queue.push(file.id)
           continue
         }
+
+        if (file.mimeType === SHORTCUT_MIME) {
+          const targetId = file.shortcutDetails?.targetId
+          const targetMime = file.shortcutDetails?.targetMimeType
+          if (!targetId || !targetMime) continue
+          if (targetMime === MIME.folder) {
+            queue.push(targetId)
+            continue
+          }
+          if (!isSupported(targetMime)) continue
+          results.push({
+            id: targetId,
+            name: file.name ?? 'Untitled',
+            mimeType: targetMime,
+            parents: file.parents ?? [],
+          })
+          continue
+        }
+
         if (!isSupported(file.mimeType)) continue
         results.push({
           id: file.id,
