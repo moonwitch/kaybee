@@ -14,6 +14,7 @@ export function renderHome(
   query: string,
 ): string {
   const isSearch = query.length > 0
+  const siteTitle = process.env.SHARED_DRIVE_NAME?.trim() || 'Loop Library'
 
   const body = `
 ${topbar({ query })}
@@ -25,13 +26,13 @@ ${topbar({ query })}
     eyebrowRight: String(new Date().getFullYear()),
     titleHtml: isSearch
       ? `Results for <em>${escHtml(query)}</em>`
-      : 'Everything the team <em>knows</em>, in one place.',
+      : escHtml(siteTitle),
     metaHtml: [
       `<b>${recent.length > 0 ? recent.length + '+' : '—'}</b> docs`,
       `<b>${topCategories.length || '—'}</b> categories`,
       'synced from Google Drive',
     ],
-    showImagePlaceholder: true,
+    backdrop: !isSearch,
   })}
 
   ${isSearch ? searchSection(searchResults, query) : homeContent(recent, topCategories)}
