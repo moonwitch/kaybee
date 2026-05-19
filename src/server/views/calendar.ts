@@ -7,7 +7,7 @@ import { escHtml } from '../lib/html.ts'
 
 export function renderCalendar(events: CalendarEvent[]): string {
   const body = `
-${topbar({ crumb: 'Calendar' })}
+${topbar()}
 
 <main class="container">
 
