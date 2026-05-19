@@ -9,7 +9,7 @@ import { escHtml } from '../lib/html.ts'
 
 export function renderTag(tag: string, docs: KaybeeDoc[]): string {
   const body = `
-${topbar({ crumb: `#${tag}` })}
+${topbar()}
 
 <main class="container">
 
