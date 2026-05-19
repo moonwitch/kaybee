@@ -18,14 +18,16 @@ export interface DriveEntry {
 }
 
 /**
- * Recursively lists every supported Workspace file under `rootFolderId`.
+ * Lists every supported Workspace file under `rootFolderId`.
  *
- * Handles regular folders, Shared Drives, and shortcuts. For Shared Drives,
- * driveId + corpora=drive are required — without them, `'X' in parents`
- * silently returns zero items, which is the #1 Shared Drive API gotcha.
+ * Two strategies:
+ *  - Shared Drive: one paginated listing of the whole drive (corpora=drive).
+ *    The drive's folder layout doesn't matter — every file shows up regardless
+ *    of nesting. Folder paths are derived later from `parents`.
+ *  - Regular folder: BFS walk via `'X' in parents`.
  *
- * Shortcuts are dereferenced: if the target mime type is supported, the
- * shortcut becomes an entry pointing at the target file ID.
+ * Shortcuts are dereferenced: a shortcut to a supported file becomes an
+ * entry pointing at the target.
  */
 export async function listAllFiles(
   rootFolderId: string,
@@ -36,6 +38,50 @@ export async function listAllFiles(
       `mode=${driveId ? `shared-drive(${driveId})` : 'folder'}`,
   )
 
+  return driveId
+    ? listEntireSharedDrive(driveId)
+    : walkFolderTree(rootFolderId)
+}
+
+async function listEntireSharedDrive(driveId: string): Promise<DriveEntry[]> {
+  const results: DriveEntry[] = []
+  const mimeCounts: Record<string, number> = {}
+  let total = 0
+  let pageToken: string | undefined = undefined
+
+  while (true) {
+    const response: GaxiosResponse<drive_v3.Schema$FileList> =
+      await drive.files.list({
+        q: 'trashed = false',
+        fields:
+          'nextPageToken, files(id, name, mimeType, parents, shortcutDetails)',
+        pageSize: 1000,
+        pageToken,
+        corpora: 'drive',
+        driveId,
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
+      })
+
+    const files = response.data.files ?? []
+    total += files.length
+    for (const f of files) {
+      const m = f.mimeType ?? '(none)'
+      mimeCounts[m] = (mimeCounts[m] ?? 0) + 1
+    }
+    for (const file of files) collect(file, results)
+
+    pageToken = response.data.nextPageToken ?? undefined
+    if (!pageToken) break
+  }
+
+  console.log(
+    `[indexer] drive scan total=${total} mimes=${JSON.stringify(mimeCounts)}`,
+  )
+  return results
+}
+
+async function walkFolderTree(rootFolderId: string): Promise<DriveEntry[]> {
   const results: DriveEntry[] = []
   const queue: string[] = [rootFolderId]
   const seen = new Set<string>()
@@ -54,56 +100,19 @@ export async function listAllFiles(
             'nextPageToken, files(id, name, mimeType, parents, shortcutDetails)',
           pageSize: 1000,
           pageToken,
+          corpora: 'allDrives',
           supportsAllDrives: true,
           includeItemsFromAllDrives: true,
-          ...(driveId
-            ? { corpora: 'drive', driveId }
-            : { corpora: 'allDrives' }),
         })
 
       const files = response.data.files ?? []
-      const mimeCounts: Record<string, number> = {}
-      for (const f of files) {
-        const m = f.mimeType ?? '(none)'
-        mimeCounts[m] = (mimeCounts[m] ?? 0) + 1
-      }
-      console.log(
-        `[indexer] folder=${folderId} pageItems=${files.length} mimes=${JSON.stringify(mimeCounts)}`,
-      )
-
+      console.log(`[indexer] folder=${folderId} pageItems=${files.length}`)
       for (const file of files) {
-        if (!file.id || !file.mimeType) continue
-
-        if (file.mimeType === MIME.folder) {
+        if (file.mimeType === MIME.folder && file.id) {
           queue.push(file.id)
-          continue
+        } else {
+          collect(file, results)
         }
-
-        if (file.mimeType === SHORTCUT_MIME) {
-          const targetId = file.shortcutDetails?.targetId
-          const targetMime = file.shortcutDetails?.targetMimeType
-          if (!targetId || !targetMime) continue
-          if (targetMime === MIME.folder) {
-            queue.push(targetId)
-            continue
-          }
-          if (!isSupported(targetMime)) continue
-          results.push({
-            id: targetId,
-            name: file.name ?? 'Untitled',
-            mimeType: targetMime,
-            parents: file.parents ?? [],
-          })
-          continue
-        }
-
-        if (!isSupported(file.mimeType)) continue
-        results.push({
-          id: file.id,
-          name: file.name ?? 'Untitled',
-          mimeType: file.mimeType,
-          parents: file.parents ?? [],
-        })
       }
 
       pageToken = response.data.nextPageToken ?? undefined
@@ -112,6 +121,35 @@ export async function listAllFiles(
   }
 
   return results
+}
+
+/**
+ * Adds a file to results if it's a supported type (or a shortcut to one).
+ * Mutates `results` in place — keeps the call sites lean.
+ */
+function collect(file: drive_v3.Schema$File, results: DriveEntry[]): void {
+  if (!file.id || !file.mimeType) return
+
+  if (file.mimeType === SHORTCUT_MIME) {
+    const targetId = file.shortcutDetails?.targetId
+    const targetMime = file.shortcutDetails?.targetMimeType
+    if (!targetId || !targetMime || !isSupported(targetMime)) return
+    results.push({
+      id: targetId,
+      name: file.name ?? 'Untitled',
+      mimeType: targetMime,
+      parents: file.parents ?? [],
+    })
+    return
+  }
+
+  if (!isSupported(file.mimeType)) return
+  results.push({
+    id: file.id,
+    name: file.name ?? 'Untitled',
+    mimeType: file.mimeType,
+    parents: file.parents ?? [],
+  })
 }
 
 /**
