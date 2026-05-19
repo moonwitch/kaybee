@@ -31,7 +31,7 @@ jobs:
           region: ${{ env.REGION }}
           project_id: ${{ env.PROJECT_ID }}
           source: ./
-          service_account: ${{ env.RUNTIME_SA }}
+          flags: '--service-account=${{ env.RUNTIME_SA }}'
           env_vars: |
             GCP_PROJECT_ID=${{ env.PROJECT_ID }}
             GCS_BUCKET=${{ vars.GCS_BUCKET }}
