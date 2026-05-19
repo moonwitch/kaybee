@@ -9,6 +9,8 @@ env:
   REGION: ${{ vars.GCP_REGION }}
   SERVICE: kaybee
   RUNTIME_SA: ${{ vars.CLOUD_RUN_SA }}
+  # Full image path in your existing Artifact Registry repo
+  IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/loop-intranet-prod/kaybee
 
 jobs:
   deploy:
@@ -23,14 +25,29 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Deploy to Cloud Run from Source
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --tag ${{ env.IMAGE }}:${{ github.sha }} \
+            --tag ${{ env.IMAGE }}:latest \
+            .
+
+      - name: Push to Artifact Registry
+        run: |
+          docker push ${{ env.IMAGE }}:${{ github.sha }}
+          docker push ${{ env.IMAGE }}:latest
+
+      - name: Deploy to Cloud Run
         id: deploy
         uses: google-github-actions/deploy-cloudrun@v3
         with:
           service: ${{ env.SERVICE }}
           region: ${{ env.REGION }}
           project_id: ${{ env.PROJECT_ID }}
-          source: ./
+          image: ${{ env.IMAGE }}:${{ github.sha }}
           flags: '--service-account=${{ env.RUNTIME_SA }}'
           env_vars: |
             GCP_PROJECT_ID=${{ env.PROJECT_ID }}
@@ -40,5 +57,5 @@ jobs:
           secrets: |
             SYNC_SECRET=SYNC_SECRET:latest
 
-      - name: Show me the output
+      - name: Show deployed URL
         run: echo ${{ steps.deploy.outputs.url }}
