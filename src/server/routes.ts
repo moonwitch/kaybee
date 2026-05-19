@@ -9,7 +9,7 @@ import {
 import { syncHandler, reindexHandler } from '../sync/handler.ts'
 import { renderMarkdown } from '../render/markdown.ts'
 import { serveAsset } from '../storage/assets.ts'
-import { listUpcomingEvents } from '../calendar/client.ts'
+import { listUpcomingEvents, type CalendarEvent } from '../calendar/client.ts'
 import { renderHome } from './views/home.ts'
 import { renderDoc } from './views/doc.ts'
 import { renderCalendar } from './views/calendar.ts'
@@ -53,6 +53,9 @@ export async function router(req: Request): Promise<Response> {
   }
 
   if (pathname === '/calendar') {
+    if (url.searchParams.has('demo')) {
+      return htmlResponse(renderCalendar(demoEvents()))
+    }
     const ids = (process.env.CALENDAR_IDS ?? '')
       .split(',')
       .map((s) => s.trim())
@@ -123,6 +126,71 @@ function htmlResponse(body: string): Response {
   return new Response(body, {
     headers: { 'Content-Type': 'text/html; charset=utf-8' },
   })
+}
+
+function demoEvents(): CalendarEvent[] {
+  const now = new Date()
+  const at = (daysAhead: number, hour: number, minute: number = 0): Date => {
+    const d = new Date(now)
+    d.setDate(d.getDate() + daysAhead)
+    d.setHours(hour, minute, 0, 0)
+    return d
+  }
+  const hourLater = (d: Date, hours: number = 1): Date =>
+    new Date(d.getTime() + hours * 60 * 60 * 1000)
+
+  const samples: Array<Omit<CalendarEvent, 'end'> & { duration: number }> = [
+    {
+      id: 'demo-1', calendarId: 'demo',
+      title: 'All-hands · Quarterly update',
+      start: at(0, 16),
+      duration: 1,
+      location: 'HQ — Atrium',
+      htmlLink: 'https://calendar.google.com/calendar/',
+    },
+    {
+      id: 'demo-2', calendarId: 'demo',
+      title: 'Library office hours',
+      start: at(1, 10, 30),
+      duration: 1,
+      location: '',
+      htmlLink: 'https://calendar.google.com/calendar/',
+    },
+    {
+      id: 'demo-3', calendarId: 'demo',
+      title: 'Design review — intranet hero',
+      start: at(2, 14),
+      duration: 1,
+      location: 'Meet — link in invite',
+      htmlLink: 'https://calendar.google.com/calendar/',
+    },
+    {
+      id: 'demo-4', calendarId: 'demo',
+      title: 'Lunch & learn: Drive search tips',
+      start: at(4, 12, 30),
+      duration: 1,
+      location: 'Kitchen',
+      htmlLink: 'https://calendar.google.com/calendar/',
+    },
+    {
+      id: 'demo-5', calendarId: 'demo',
+      title: 'Engineering planning',
+      start: at(7, 9),
+      duration: 2,
+      location: 'Room: Helix',
+      htmlLink: 'https://calendar.google.com/calendar/',
+    },
+    {
+      id: 'demo-6', calendarId: 'demo',
+      title: 'Loop social',
+      start: at(10, 17),
+      duration: 2,
+      location: 'Rooftop',
+      htmlLink: 'https://calendar.google.com/calendar/',
+    },
+  ]
+
+  return samples.map(({ duration, ...e }) => ({ ...e, end: hourLater(e.start, duration) }))
 }
 
 function jsonError(message: string, status: number): Response {
