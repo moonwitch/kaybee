@@ -1,7 +1,8 @@
 name: Build || Push || Deploy Cloud
 on:
   push:
-    branches: main
+    branches: [main]
+  workflow_dispatch:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
