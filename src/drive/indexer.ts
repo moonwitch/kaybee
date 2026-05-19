@@ -17,14 +17,20 @@ export interface DriveEntry {
 
 /**
  * Recursively lists every supported Workspace file under `rootFolderId`.
- * Folders are traversed; binaries and unsupported types are skipped.
  *
- * Uses corpora=allDrives so the call works for both shared drives and
- * regular folders shared with the service account.
+ * Handles both regular folders and Shared Drives. For a Shared Drive root,
+ * `driveId` + `corpora: 'drive'` are required — otherwise `'X' in parents`
+ * silently returns zero items, which is the #1 Shared Drive API gotcha.
  */
 export async function listAllFiles(
   rootFolderId: string,
 ): Promise<DriveEntry[]> {
+  const driveId = await detectSharedDriveId(rootFolderId)
+  console.log(
+    `[indexer] root=${rootFolderId} ` +
+      `mode=${driveId ? `shared-drive(${driveId})` : 'folder'}`,
+  )
+
   const results: DriveEntry[] = []
   const queue: string[] = [rootFolderId]
   const seen = new Set<string>()
@@ -44,10 +50,17 @@ export async function listAllFiles(
           pageToken,
           supportsAllDrives: true,
           includeItemsFromAllDrives: true,
-          corpora: 'allDrives',
+          ...(driveId
+            ? { corpora: 'drive', driveId }
+            : { corpora: 'allDrives' }),
         })
 
-      for (const file of response.data.files ?? []) {
+      const files = response.data.files ?? []
+      console.log(
+        `[indexer] folder=${folderId} pageItems=${files.length}`,
+      )
+
+      for (const file of files) {
         if (!file.id || !file.mimeType) continue
         if (file.mimeType === MIME.folder) {
           queue.push(file.id)
@@ -68,4 +81,17 @@ export async function listAllFiles(
   }
 
   return results
+}
+
+/**
+ * Returns the Shared Drive ID if `id` is a Shared Drive root, otherwise undefined.
+ * Cheap probe — drives.get returns 404 for regular folders.
+ */
+async function detectSharedDriveId(id: string): Promise<string | undefined> {
+  try {
+    const resp = await drive.drives.get({ driveId: id })
+    return resp.data.id ?? undefined
+  } catch {
+    return undefined
+  }
 }

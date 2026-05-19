@@ -116,6 +116,7 @@ export async function getFileMeta(fileId: string): Promise<{
   const response = await drive.files.get({
     fileId,
     fields: 'id,name,parents,mimeType',
+    supportsAllDrives: true,
   })
 
   return {
@@ -137,6 +138,7 @@ export async function resolveFolderPath(fileId: string): Promise<string> {
     const response = await drive.files.get({
       fileId: currentId,
       fields: 'id,name,parents',
+      supportsAllDrives: true,
     })
 
     const name = response.data.name ?? ''
