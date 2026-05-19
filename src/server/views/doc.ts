@@ -15,7 +15,7 @@ export function renderDoc(doc: KaybeeDoc, html: string): string {
   const editLabel = `Open in ${mimeLabel(doc.mimeType) || 'Drive'}`
 
   const body = `
-${topbar({ crumb: doc.title })}
+${topbar()}
 
 <main class="container">
 
