@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Loop · Sync architecture</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <style>
+    /* ---------- Architecture-only styles ---------- */
+    .page {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 28px 32px 80px;
+    }
+    .page-head {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 28px;
+      align-items: end;
+      padding-bottom: 24px;
+      margin-bottom: 28px;
+      border-bottom: 1px solid var(--line);
+    }
+    .page-head h1 {
+      font-size: 44px;
+      letter-spacing: -0.035em;
+      font-weight: 500;
+      line-height: 1.05;
+      margin: 14px 0 0;
+    }
+    .page-head .dek {
+      max-width: 60ch;
+      color: var(--ink-3);
+      font-size: 16px;
+      margin-top: 14px;
+    }
+    .pill-row {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      margin-top: 18px;
+    }
+
+    .legend {
+      display: flex; flex-wrap: wrap; gap: 22px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--ink-3);
+    }
+    .legend .item { display: inline-flex; align-items: center; gap: 8px; }
+    .legend .sw { display: inline-block; width: 30px; height: 0; border-top: 2px solid; position: relative; }
+    .legend .sw::after {
+      content: ""; position: absolute; right: -2px; top: -4px;
+      border-left: 7px solid currentColor;
+      border-top: 4px solid transparent;
+      border-bottom: 4px solid transparent;
+    }
+    .legend .sw.dashed { border-top-style: dashed; }
+
+    /* Diagram canvas */
+    .canvas-wrap {
+      overflow-x: auto;
+      border-radius: 14px;
+      background:
+        radial-gradient(circle at 1px 1px, color-mix(in oklab, var(--ink) 8%, transparent) 1px, transparent 1px) 0 0 / 24px 24px,
+        var(--bg-elevated);
+      border: 1px solid var(--line);
+      padding: 0;
+    }
+    .canvas {
+      position: relative;
+      width: 1280px;
+      height: 760px;
+      margin: 0 auto;
+    }
+
+    /* Zones */
+    .zone {
+      position: absolute;
+      border: 1px dashed var(--line-strong);
+      border-radius: 14px;
+      background: color-mix(in oklab, var(--paper) 60%, transparent);
+    }
+    .zone-label {
+      position: absolute;
+      top: -10px; left: 18px;
+      background: var(--bg-elevated);
+      padding: 0 10px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+    }
+    .zone-label b { color: var(--ink); }
+
+    /* Nodes */
+    .node {
+      position: absolute;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 14px;
+      display: flex; flex-direction: column; gap: 4px;
+      box-shadow: 0 1px 0 rgba(44,35,46,0.02), 0 8px 18px -16px rgba(44,35,46,0.18);
+      z-index: 2;
+    }
+    .node.tinted {
+      border-left: 3px solid var(--accent, var(--ink-3));
+    }
+    .node .n-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--ink);
+      letter-spacing: -0.005em;
+      display: flex; align-items: center; gap: 8px;
+      white-space: nowrap;
+      min-width: 0;
+    }
+    .node .n-title .badge {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--ink-2);
+      background: var(--bg-sunken);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+    .node .n-meta {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--ink-3);
+      line-height: 1.45;
+    }
+    .node .n-kbd {
+      margin-left: auto;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--ink-4);
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: var(--bg-sunken);
+    }
+    .node-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--accent, var(--ink));
+      flex-shrink: 0;
+    }
+
+    /* Arrows */
+    svg.arrows {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .arrow-label {
+      position: absolute;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      color: var(--ink-2);
+      z-index: 3;
+      white-space: nowrap;
+      transform: translate(-50%, -50%);
+    }
+    .arrow-label.green  { color: var(--green); border-color: color-mix(in oklab, var(--green) 30%, transparent); }
+    .arrow-label.orange { color: var(--orange); border-color: color-mix(in oklab, var(--orange) 30%, transparent); }
+    .arrow-label.purple { color: var(--purple); border-color: color-mix(in oklab, var(--purple) 30%, transparent); }
+
+    /* Lifecycle ladder */
+    .lifecycle {
+      margin-top: 56px;
+      padding-top: 36px;
+      border-top: 1px solid var(--line);
+    }
+    .lifecycle h2 { font-size: 22px; margin-bottom: 18px; }
+    .ladder {
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: 0;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--paper);
+      overflow: hidden;
+    }
+    .ladder .step {
+      display: contents;
+    }
+    .ladder .num {
+      grid-column: 1;
+      padding: 18px 18px 18px 22px;
+      border-bottom: 1px solid var(--line);
+      font-family: var(--font-mono);
+      color: var(--ink-3);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      background: var(--bg-elevated);
+    }
+    .ladder .body {
+      grid-column: 2;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--line);
+      border-left: 1px solid var(--line);
+    }
+    .ladder .step:last-child .num,
+    .ladder .step:last-child .body { border-bottom: 0; }
+    .ladder b { color: var(--ink); }
+    .ladder p { color: var(--ink-3); font-size: 14px; margin-top: 4px; }
+    .ladder code {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      background: var(--bg-sunken);
+      padding: 1px 6px;
+      border-radius: 4px;
+      color: var(--ink);
+    }
+
+    /* Concerns row */
+    .concern-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 48px;
+    }
+    .concern {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px;
+    }
+    .concern h3 {
+      font-size: 15px; margin-bottom: 6px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .concern .icn {
+      width: 22px; height: 22px; border-radius: 6px;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: var(--paper); font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+    }
+    .concern p { font-size: 13.5px; color: var(--ink-3); line-height: 1.55; }
+    .concern .stat { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-4); margin-top: 10px; }
+
+    @media (max-width: 1340px) {
+      .canvas-wrap { padding-bottom: 4px; }
+    }
+    @media (max-width: 900px) {
+      .concern-grid { grid-template-columns: 1fr; }
+      .page-head { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-name">Loop</span>
+        <span class="brand-sub">Library</span>
+        <span class="brand-crumb">/ sync architecture</span>
+      </div>
+      <div></div>
+      <div class="topnav-actions">
+        <a class="btn" href="Loop Library.html" style="text-decoration:none;">← Back to Library</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="page-head">
+      <div>
+        <div class="eyebrow">arch / 2026.04 · v0.3 · draft</div>
+        <h1>Two-way Google Docs sync,<br />designed to feel like nothing happened.</h1>
+        <p class="dek">A single Drive folder is the source of truth. Drive push notifications give us near-real-time inbound; a thin writer service sends Loop edits back through the Docs API. Authenticated end-to-end through your Workspace identity, with assets re-hosted on our CDN so docs render fast and survive ACL changes.</p>
+        <div class="pill-row">
+          <span class="tag tag-green">One-way · Docs → Library</span>
+          <span class="tag tag-orange">One-way · Library → Docs</span>
+          <span class="tag tag-purple">GWS identity</span>
+          <span class="tag tag-blue">Push (webhooks)</span>
+          <span class="tag tag-yellow">Asset rewriting</span>
+        </div>
+      </div>
+      <div class="legend">
+        <div class="item"><span class="sw" style="color: var(--green)"></span>inbound flow</div>
+        <div class="item"><span class="sw" style="color: var(--orange)"></span>outbound flow</div>
+        <div class="item"><span class="sw dashed" style="color: var(--purple)"></span>identity / auth</div>
+        <div class="item"><span class="sw" style="color: var(--blue)"></span>asset pipeline</div>
+      </div>
+    </div>
+
+    <!-- ---------- Diagram canvas ---------- -->
+    <div class="canvas-wrap">
+      <div class="canvas">
+        <!-- SVG layer for arrows (under nodes) -->
+        <svg class="arrows" viewBox="0 0 1280 760" preserveAspectRatio="none">
+          <defs>
+            <marker id="arr-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill="#218871" />
+            </marker>
+            <marker id="arr-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill="#cc6633" />
+            </marker>
+            <marker id="arr-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill="#6851a2" />
+            </marker>
+            <marker id="arr-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill="#1f6fd0" />
+            </marker>
+          </defs>
+
+          <!-- INBOUND FLOW (green) -->
+          <!-- A2 Docs editor → A3 Push channel (inside left zone) -->
+          <path d="M 200 280 L 200 370" stroke="#218871" stroke-width="1.6" fill="none" marker-end="url(#arr-green)" />
+
+          <!-- A3 Push channel → B1 Webhook receiver (cross-lane) -->
+          <path d="M 340 415 C 400 415, 400 165, 460 165" stroke="#218871" stroke-width="1.8" fill="none" marker-end="url(#arr-green)" />
+
+          <!-- B1 → B2 -->
+          <path d="M 640 200 L 640 215" stroke="#218871" stroke-width="1.6" fill="none" marker-end="url(#arr-green)" />
+          <!-- B2 → B3 -->
+          <path d="M 640 285 L 640 300" stroke="#218871" stroke-width="1.6" fill="none" marker-end="url(#arr-green)" />
+          <!-- B3 → B4 (assets) -->
+          <path d="M 640 385 L 640 400" stroke="#1f6fd0" stroke-width="1.6" fill="none" marker-end="url(#arr-blue)" />
+          <!-- B3 → C2 (cross-lane: write blocks) -->
+          <path d="M 820 340 C 880 340, 880 280, 940 280" stroke="#218871" stroke-width="1.8" fill="none" marker-end="url(#arr-green)" />
+          <!-- B4 → C3 (cross-lane: asset CDN) -->
+          <path d="M 820 440 C 880 440, 880 415, 940 415" stroke="#1f6fd0" stroke-width="1.8" fill="none" marker-end="url(#arr-blue)" />
+
+          <!-- C2 → C1 (index) -->
+          <path d="M 1070 240 L 1070 210" stroke="#218871" stroke-width="1.4" fill="none" marker-end="url(#arr-green)" />
+          <!-- C2 → C4 (serve to UI) -->
+          <path d="M 1070 320 L 1070 485" stroke="#218871" stroke-width="1.4" fill="none" marker-end="url(#arr-green)" />
+          <!-- C3 → C4 (assets served to UI) -->
+          <path d="M 1070 450 L 1070 485" stroke="#1f6fd0" stroke-width="1.2" fill="none" stroke-dasharray="3 3" />
+
+          <!-- OUTBOUND FLOW (orange) -->
+          <!-- C4 → B5 (cross-lane: library edit → outbound writer) -->
+          <path d="M 940 530 C 880 530, 880 555, 820 555" stroke="#cc6633" stroke-width="1.8" fill="none" marker-end="url(#arr-orange)" />
+          <!-- B5 → A2 (cross-lane up to Docs editor) -->
+          <path d="M 460 555 C 400 555, 400 260, 340 260" stroke="#cc6633" stroke-width="1.8" fill="none" marker-end="url(#arr-orange)" />
+
+          <!-- RECONCILER (yellow recovery loop, drawn green dashed for simplicity) -->
+          <path d="M 460 645 L 410 645 L 410 200 L 458 200" stroke="#218871" stroke-width="1.2" fill="none" stroke-dasharray="4 4" marker-end="url(#arr-green)" />
+
+          <!-- IDENTITY (purple dashed): A4 → B group + → C4 -->
+          <path d="M 200 660 C 200 720, 640 720, 640 685" stroke="#6851a2" stroke-width="1.4" fill="none" stroke-dasharray="4 4" marker-end="url(#arr-purple)" />
+          <path d="M 200 660 C 200 740, 1070 740, 1070 595" stroke="#6851a2" stroke-width="1.4" fill="none" stroke-dasharray="4 4" marker-end="url(#arr-purple)" />
+        </svg>
+
+        <!-- Arrow labels -->
+        <div class="arrow-label green"  style="left: 400px; top: 290px;">drive · changes</div>
+        <div class="arrow-label green"  style="left: 880px; top: 270px;">upsert blocks</div>
+        <div class="arrow-label orange" style="left: 880px; top: 540px;">edit · diff</div>
+        <div class="arrow-label orange" style="left: 400px; top: 410px;">docs.batchUpdate</div>
+        <div class="arrow-label purple" style="left: 760px; top: 720px;">OAuth · scopes</div>
+        <div class="arrow-label" style="left: 410px; top: 645px; color: var(--green); border-color: color-mix(in oklab, var(--green) 30%, transparent);">sweep · 5m</div>
+
+        <!-- ---------- Zones ---------- -->
+        <div class="zone" style="left: 30px; top: 60px; width: 340px; height: 660px;">
+          <span class="zone-label"><b>Google Workspace</b> · customer tenant</span>
+        </div>
+        <div class="zone" style="left: 430px; top: 60px; width: 410px; height: 660px;">
+          <span class="zone-label"><b>Loop Sync</b> · cloud run + queue</span>
+        </div>
+        <div class="zone" style="left: 900px; top: 60px; width: 350px; height: 660px;">
+          <span class="zone-label"><b>Loop Library</b> · public site</span>
+        </div>
+
+        <!-- ---------- LEFT zone nodes ---------- -->
+        <div class="node tinted" style="--accent: var(--green); left: 60px; top: 110px; width: 280px;">
+          <div class="n-title"><span class="node-dot"></span>Drive folder<span class="badge">/Loop Library</span></div>
+          <div class="n-meta">source of truth · 312 docs<br/>watched recursively · subfolders = categories</div>
+        </div>
+        <div class="node tinted" style="--accent: var(--green); left: 60px; top: 220px; width: 280px;">
+          <div class="n-title"><span class="node-dot"></span>Google Docs editor</div>
+          <div class="n-meta">where Loopers write &amp; suggest<br/>edits trigger a Drive change event</div>
+        </div>
+        <div class="node tinted" style="--accent: var(--green); left: 60px; top: 370px; width: 280px;">
+          <div class="n-title"><span class="node-dot"></span>Drive push channel<span class="n-kbd">files.watch</span></div>
+          <div class="n-meta">7-day channel, auto-renewed<br/>POSTs to our HTTPS endpoint w/ resource id</div>
+        </div>
+        <div class="node tinted" style="--accent: var(--purple); left: 60px; top: 610px; width: 280px;">
+          <div class="n-title"><span class="node-dot"></span>GWS identity &amp; groups</div>
+          <div class="n-meta">workspace OAuth · service account w/ DWD<br/>group memberships drive read-ACL in Loop</div>
+        </div>
+
+        <!-- ---------- MIDDLE zone nodes ---------- -->
+        <div class="node tinted" style="--accent: var(--green); left: 460px; top: 130px; width: 360px;">
+          <div class="n-title"><span class="node-dot"></span>Webhook receiver<span class="n-kbd">cloud run</span></div>
+          <div class="n-meta">verifies channel signature · drops in &lt; 50ms<br/>enqueues {resourceId, changeType} and returns 200</div>
+        </div>
+        <div class="node tinted" style="--accent: var(--green); left: 460px; top: 215px; width: 360px;">
+          <div class="n-title"><span class="node-dot"></span>Idempotent job queue<span class="n-kbd">pub/sub</span></div>
+          <div class="n-meta">dedups by docId+revisionId · exponential backoff<br/>poison letters after 5 attempts → ops alert</div>
+        </div>
+        <div class="node tinted" style="--accent: var(--green); left: 460px; top: 300px; width: 360px;">
+          <div class="n-title"><span class="node-dot"></span>Doc transformer<span class="n-kbd">docs.get</span></div>
+          <div class="n-meta">Google Docs structuredContent → Loop blocks<br/>preserves headings, lists, tables, suggestions, links</div>
+        </div>
+        <div class="node tinted" style="--accent: var(--blue); left: 460px; top: 400px; width: 360px;">
+          <div class="n-title"><span class="node-dot"></span>Asset pipeline<span class="n-kbd">images · embeds</span></div>
+          <div class="n-meta">fetches inline images via Drive auth · hashes content<br/>uploads to CDN · rewrites &lt;img src&gt; in stored blocks</div>
+        </div>
+        <div class="node tinted" style="--accent: var(--orange); left: 460px; top: 520px; width: 360px;">
+          <div class="n-title"><span class="node-dot"></span>Outbound writer<span class="n-kbd">docs.batchUpdate</span></div>
+          <div class="n-meta">Library edit → minimal diff → batchUpdate request<br/>3-way merge if remote revision moved while editing</div>
+        </div>
+        <div class="node tinted" style="--accent: var(--green); left: 460px; top: 615px; width: 360px;">
+          <div class="n-title"><span class="node-dot"></span>Reconciler<span class="n-kbd">cron · 5m</span></div>
+          <div class="n-meta">walks the folder w/ Drive list · catches missed events<br/>repairs anything the push channel dropped</div>
+        </div>
+
+        <!-- ---------- RIGHT zone nodes ---------- -->
+        <div class="node tinted" style="--accent: var(--green); left: 930px; top: 130px; width: 290px;">
+          <div class="n-title"><span class="node-dot"></span>Search index<span class="n-kbd">typesense</span></div>
+          <div class="n-meta">title + body + meta · synonyms<br/>updated on every block upsert</div>
+        </div>
+        <div class="node tinted" style="--accent: var(--green); left: 930px; top: 240px; width: 290px;">
+          <div class="n-title"><span class="node-dot"></span>Doc store<span class="n-kbd">postgres</span></div>
+          <div class="n-meta">block tree + revision history<br/>foreign key → category, author, ACL</div>
+        </div>
+        <div class="node tinted" style="--accent: var(--blue); left: 930px; top: 370px; width: 290px;">
+          <div class="n-title"><span class="node-dot"></span>Asset CDN<span class="n-kbd">r2 · cf</span></div>
+          <div class="n-meta">immutable urls by content hash<br/>signed urls for ACL-restricted docs</div>
+        </div>
+        <div class="node tinted" style="--accent: var(--orange); left: 930px; top: 485px; width: 290px;">
+          <div class="n-title"><span class="node-dot"></span>Library UI · editor</div>
+          <div class="n-meta">read-mostly · star, share, copy link<br/>optional in-place edit → outbound writer</div>
+        </div>
+        <div class="node tinted" style="--accent: var(--yellow); left: 930px; top: 610px; width: 290px;">
+          <div class="n-title"><span class="node-dot"></span>Audit &amp; activity feed</div>
+          <div class="n-meta">who · what · when · which revision<br/>powers the activity row on Library home</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ---------- Lifecycle ---------- -->
+    <section class="lifecycle">
+      <div class="eyebrow" style="margin-bottom:6px;">Lifecycle</div>
+      <h2>What happens when a Looper edits a Google Doc</h2>
+      <div class="ladder">
+        <div class="step">
+          <div class="num">T+0s</div>
+          <div class="body">
+            <b>Edit lands in Google Docs.</b>
+            <p>An author saves a change to <code>/Loop Library/ops/sev1-runbook</code>. Drive fires a <code>changes.watch</code> notification on our registered channel within ~1 second.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num">T+1s</div>
+          <div class="body">
+            <b>Webhook receiver ACKs and enqueues.</b>
+            <p>The receiver verifies the channel token, drops the resourceId on a Pub/Sub topic keyed by <code>docId</code>, and returns 200 to Drive in under 50ms. We never hold the request open.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num">T+2s</div>
+          <div class="body">
+            <b>Transformer pulls the new revision.</b>
+            <p>Worker calls <code>docs.get</code> + <code>drive.revisions.get</code>, dedups against the last stored revision, and converts the structured content tree into Loop's block schema. Suggestions and comments stay attached.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num">T+3s</div>
+          <div class="body">
+            <b>Assets re-hosted in parallel.</b>
+            <p>Inline images are fetched with the service-account token, hashed, written to the CDN at <code>/a/&lt;sha256&gt;</code>, and the URLs in the stored blocks are rewritten. Old asset rows are GC'd after 7 days.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num">T+4s</div>
+          <div class="body">
+            <b>Doc store + search index update atomically.</b>
+            <p>One transaction writes the new block tree, the revision pointer, and bumps the search index. Anyone with the library open sees a soft toast: <code>Updated by Jordan · 2s ago</code>.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num">∞</div>
+          <div class="body">
+            <b>Reconciler keeps us honest.</b>
+            <p>Every 5 minutes a sweep lists the folder via <code>drive.files.list</code> and reconciles anything the push channel may have dropped — including out-of-band moves, deletions, and ACL changes.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- Two-way & concerns ---------- -->
+    <section style="margin-top:48px;">
+      <div class="eyebrow" style="margin-bottom:6px;">Going the other way</div>
+      <h2 style="font-size:22px;margin-bottom:18px;">Library edits → Google Docs</h2>
+      <div style="background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 22px; font-size: 14.5px; color: var(--ink-2); line-height: 1.6;">
+        <p style="margin:0 0 12px;">A small in-place editor in the Library produces a <b>minimal block-level diff</b>. The outbound writer translates that into a <code>docs.batchUpdate</code> request — typically a handful of <code>InsertTextRequest</code>, <code>DeleteContentRangeRequest</code>, or <code>UpdateTextStyleRequest</code> operations.</p>
+        <p style="margin:0 0 12px;">Before writing, we re-fetch the current revision id. If it has moved since the user started editing, we run a <b>3-way merge</b> on block boundaries. Conflicts that can't be merged are surfaced inline as a Google Docs suggestion attributed to the original author — never silently overwritten.</p>
+        <p style="margin:0;">Writes go through the same service account, so they show up in Drive's audit log as <code>via Loop Library</code>, attributed to the editing user via <code>actAs</code> impersonation.</p>
+      </div>
+    </section>
+
+    <!-- ---------- Asset concerns highlight ---------- -->
+    <section style="margin-top: 36px;">
+      <div class="eyebrow" style="margin-bottom: 6px;">The interesting bits</div>
+      <h2 style="font-size: 22px;">Why assets are their own pipeline</h2>
+      <div class="concern-grid">
+        <div class="concern">
+          <h3><span class="icn" style="background: var(--blue);">1</span> Original urls are short-lived</h3>
+          <p>Drive serves inline images under signed, scoped, expiring URLs. We can't link to them directly — they'd break the moment a reader's session lapses. So every image is mirrored to our CDN on first sight.</p>
+          <div class="stat">avg pull · 180ms · 92% cache hit on second sync</div>
+        </div>
+        <div class="concern">
+          <h3><span class="icn" style="background: var(--green);">2</span> Content-addressed = free dedup</h3>
+          <p>Assets are stored by SHA-256 of their bytes. The same logo pasted into 40 different runbooks costs us one upload and one CDN entry — and the URL never changes between syncs.</p>
+          <div class="stat">312 docs · 4,891 image references · 1,204 unique blobs</div>
+        </div>
+        <div class="concern">
+          <h3><span class="icn" style="background: var(--red);">3</span> ACL-aware delivery</h3>
+          <p>For docs that aren't org-wide-readable we sign the CDN URL with a short-TTL token derived from the viewer's GWS identity. Public docs get plain immutable URLs; protected docs get token-protected ones, transparently.</p>
+          <div class="stat">14 of 312 docs are restricted · token TTL 5min · auto-renew</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- Footer ---------- -->
+    <footer class="foot" style="margin-top: 64px;">
+      <div class="left">
+        <span class="sun-stripe">
+          <i style="background:var(--yellow);width:10px;height:4px;display:inline-block;border-radius:1px;"></i>
+          <i style="background:var(--orange);width:10px;height:4px;display:inline-block;border-radius:1px;margin-left:4px;"></i>
+          <i style="background:var(--red);width:10px;height:4px;display:inline-block;border-radius:1px;margin-left:4px;"></i>
+          <i style="background:var(--purple);width:10px;height:4px;display:inline-block;border-radius:1px;margin-left:4px;"></i>
+          <i style="background:var(--blue);width:10px;height:4px;display:inline-block;border-radius:1px;margin-left:4px;"></i>
+          <i style="background:var(--green);width:10px;height:4px;display:inline-block;border-radius:1px;margin-left:4px;"></i>
+        </span>
+        <span>loop / library · sync arch v0.3 · draft for eng review</span>
+      </div>
+      <div>owners: platform · last updated apr 22, 2026</div>
+    </footer>
+  </main>
+</body>
+</html>

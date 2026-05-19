@@ -1,12 +1,14 @@
 name: Build || Push || Deploy Cloud
 on:
   push:
-    branches: main
+    branches: [main]
+  workflow_dispatch:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: ${{ vars.GCP_REGION }}
   SERVICE: kaybee
+  RUNTIME_SA: ${{ vars.CLOUD_RUN_SA }}
 
 jobs:
   deploy:
@@ -21,18 +23,22 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Create Service Account File
-        run: echo '${{ secrets.GCP_SA_KEY }}' > service-account.json
-
       - name: Deploy to Cloud Run from Source
+        id: deploy
         uses: google-github-actions/deploy-cloudrun@v3
         with:
           service: ${{ env.SERVICE }}
           region: ${{ env.REGION }}
+          project_id: ${{ env.PROJECT_ID }}
           source: ./
+          service_account: ${{ env.RUNTIME_SA }}
           env_vars: |
+            GCP_PROJECT_ID=${{ env.PROJECT_ID }}
+            GCS_BUCKET=${{ vars.GCS_BUCKET }}
+            FIRESTORE_DATABASE_ID=${{ vars.FIRESTORE_DATABASE_ID }}
             ROOT_FOLDER_ID=${{ vars.ROOT_FOLDER_ID }}
-            GOOGLE_APPLICATION_CREDENTIALS=service-account.json
+          secrets: |
+            SYNC_SECRET=SYNC_SECRET:latest
 
       - name: Show me the output
-        run: echo ${{ steps.deploy.outputs.url}}
+        run: echo ${{ steps.deploy.outputs.url }}

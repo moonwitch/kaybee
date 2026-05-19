@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Loop · Templates</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <style>
+    /* ---------- Templates gallery styles ---------- */
+    .page { max-width: 1320px; margin: 0 auto; padding: 28px 32px 96px; }
+    .page-head {
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+      border-bottom: 1px solid var(--line);
+    }
+    .page-head h1 {
+      font-size: 44px; letter-spacing: -0.035em; font-weight: 500; line-height: 1.05;
+      margin: 14px 0 0;
+    }
+    .page-head .dek { max-width: 60ch; color: var(--ink-3); font-size: 16px; margin-top: 14px; }
+
+    .toc {
+      display: flex; gap: 28px; flex-wrap: wrap;
+      padding: 18px 22px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      margin-top: 24px;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+    }
+    .toc a { color: var(--ink-2); display: inline-flex; align-items: center; gap: 10px; }
+    .toc a:hover { color: var(--ink); }
+    .toc .num {
+      width: 22px; height: 22px; border-radius: 6px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--bg-sunken); color: var(--ink); font-size: 11px;
+    }
+    .toc .sep { color: var(--ink-4); }
+
+    /* Frame wrapper — looks like a design canvas frame */
+    .frame-block { margin-top: 56px; }
+    .frame-head {
+      display: flex; justify-content: space-between; align-items: end;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 20px;
+    }
+    .frame-head .lhs h2 {
+      font-size: 24px; letter-spacing: -0.02em;
+      margin: 6px 0 0;
+    }
+    .frame-head .rhs {
+      display: flex; gap: 8px; align-items: center;
+      font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-4);
+    }
+    .frame-head .rhs .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+    .frame {
+      position: relative;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 36px 44px;
+    }
+    .frame-tag {
+      position: absolute;
+      top: -10px; left: 24px;
+      background: var(--paper);
+      padding: 0 10px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+    }
+
+    /* Slot — a placeholder block with monospace label */
+    .slot {
+      border: 1px dashed var(--line-strong);
+      border-radius: 8px;
+      background: color-mix(in oklab, var(--bg-sunken) 50%, transparent);
+      padding: 12px 14px;
+      color: var(--ink-3);
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      letter-spacing: 0.01em;
+      display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    }
+    .slot .lbl { color: var(--ink-2); }
+    .slot .req { font-size: 10.5px; padding: 1px 6px; border-radius: 999px; background: var(--bg); color: var(--ink-4); border: 1px solid var(--line); }
+    .slot .req.req-req { background: color-mix(in oklab, var(--red) 10%, var(--paper)); color: var(--red); border-color: color-mix(in oklab, var(--red) 25%, transparent); }
+    .slot .req.req-opt { background: var(--bg); color: var(--ink-4); }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin: 18px 0 6px;
+    }
+    .meta-cell {
+      padding: 10px 12px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 13px;
+    }
+    .meta-cell .k {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-4);
+      display: block;
+      margin-bottom: 4px;
+    }
+    .meta-cell .v { color: var(--ink); }
+
+    .stack > * + * { margin-top: 14px; }
+
+    /* Side annotation rail */
+    .frame-row { display: grid; grid-template-columns: 1fr 260px; gap: 36px; align-items: start; }
+    .anno {
+      position: relative;
+      padding: 14px 16px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 13px;
+      color: var(--ink-2);
+    }
+    .anno + .anno { margin-top: 14px; }
+    .anno > div { line-height: 1.55; }
+    .anno .h {
+      display: flex; align-items: center; gap: 8px;
+      font-weight: 600; color: var(--ink);
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+    .anno .h .pin {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--ink); color: var(--bg);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+    }
+    .anno code {
+      font-family: var(--font-mono); font-size: 11.5px;
+      background: var(--bg-sunken); color: var(--ink);
+      padding: 1px 5px; border-radius: 3px;
+    }
+    .anno .field-key {
+      font-family: var(--font-mono); font-size: 11px;
+      color: var(--ink-4); margin-top: 12px;
+      display: block;
+      clear: both;
+      padding-top: 10px;
+      border-top: 1px dashed var(--line);
+      letter-spacing: 0.06em; text-transform: uppercase;
+      word-break: break-word;
+      line-height: 1.5;
+    }
+
+    /* SOP step rows for the template */
+    .step-tpl {
+      counter-reset: stepc;
+      list-style: none; padding: 0; margin: 14px 0 0;
+    }
+    .step-tpl li {
+      counter-increment: stepc;
+      display: grid;
+      grid-template-columns: 36px 1fr 110px;
+      gap: 14px; align-items: center;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--paper);
+      margin-bottom: 10px;
+    }
+    .step-tpl li::before {
+      content: counter(stepc);
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--bg-sunken);
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 12px;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .step-tpl .b { font-weight: 600; color: var(--ink); font-size: 14px; }
+    .step-tpl .d { color: var(--ink-3); font-size: 13px; margin-top: 2px; }
+    .step-tpl .role {
+      font-family: var(--font-mono); font-size: 11px;
+      color: var(--ink-4); text-align: right;
+    }
+
+    /* Comment thread */
+    .comments {
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .comment {
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      gap: 14px;
+      padding: 14px 16px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    .comment.reply { margin-left: 50px; background: var(--bg-elevated); }
+    .comment.resolved { opacity: 0.7; background: color-mix(in oklab, var(--green) 6%, var(--paper)); border-color: color-mix(in oklab, var(--green) 18%, transparent); }
+    .comment.suggestion { border-left: 3px solid var(--yellow); }
+    .comment .av {
+      width: 32px; height: 32px; border-radius: 50%;
+      color: var(--paper); font-family: var(--font-mono);
+      font-weight: 600; font-size: 12px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid var(--line-strong);
+    }
+    .comment .hd {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+    .comment .name { font-weight: 600; color: var(--ink); font-size: 13.5px; }
+    .comment .when { font-family: var(--font-mono); font-size: 11px; color: var(--ink-4); }
+    .comment .badge {
+      font-family: var(--font-mono); font-size: 10.5px;
+      padding: 1px 7px; border-radius: 999px; border: 1px solid;
+      letter-spacing: 0.02em;
+    }
+    .comment .badge.draft  { background: color-mix(in oklab, var(--ink-4) 8%, var(--paper)); color: var(--ink-3); border-color: var(--line); }
+    .comment .badge.sug    { background: color-mix(in oklab, var(--yellow) 10%, var(--paper)); color: var(--yellow); border-color: color-mix(in oklab, var(--yellow) 28%, transparent); }
+    .comment .badge.res    { background: color-mix(in oklab, var(--green) 10%, var(--paper)); color: var(--green); border-color: color-mix(in oklab, var(--green) 28%, transparent); }
+    .comment .body { font-size: 14px; color: var(--ink-2); line-height: 1.55; }
+    .comment .body mark {
+      background: color-mix(in oklab, var(--yellow) 26%, transparent);
+      padding: 0 3px; border-radius: 3px; color: var(--ink);
+    }
+    .comment .actions {
+      margin-top: 10px;
+      display: flex; gap: 10px;
+      font-family: var(--font-mono); font-size: 11.5px;
+      color: var(--ink-3);
+    }
+    .comment .actions span { cursor: pointer; }
+    .comment .actions span:hover { color: var(--ink); }
+    .comment .actions .sep { color: var(--ink-4); }
+    .comment .react {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-family: var(--font-mono); font-size: 11px;
+      color: var(--ink-2);
+    }
+    .comment-composer {
+      display: grid; grid-template-columns: 36px 1fr; gap: 14px;
+      padding: 14px 16px;
+      background: var(--bg-elevated);
+      border: 1px dashed var(--line-strong);
+      border-radius: 12px;
+    }
+    .composer-input {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: var(--paper);
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--ink-3);
+      resize: vertical;
+    }
+    .composer-toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 10px;
+    }
+    .composer-toolbar .tools {
+      display: flex; gap: 6px; color: var(--ink-3);
+      font-family: var(--font-mono); font-size: 11.5px;
+    }
+    .composer-toolbar .tools span {
+      padding: 2px 6px; border-radius: 4px; cursor: pointer;
+    }
+    .composer-toolbar .tools span:hover { background: var(--bg); color: var(--ink); }
+
+    /* Generic doc template */
+    .doc-tpl-header { padding-bottom: 22px; border-bottom: 1px solid var(--line); margin-bottom: 24px; }
+    .doc-tpl-h1 {
+      font-size: 36px; line-height: 1.1; letter-spacing: -0.02em;
+      color: var(--ink); margin: 12px 0 12px; font-weight: 500;
+    }
+    .doc-tpl-dek { color: var(--ink-3); font-size: 16px; max-width: 60ch; }
+    .toc-side {
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 13px;
+    }
+    .toc-side .h {
+      font-family: var(--font-mono); font-size: 10.5px;
+      text-transform: uppercase; letter-spacing: 0.14em;
+      color: var(--ink-4); margin-bottom: 8px;
+    }
+    .toc-side ul { list-style: none; padding: 0; margin: 0; }
+    .toc-side li { padding: 4px 0; color: var(--ink-2); font-size: 13px; }
+    .toc-side li.active { color: var(--ink); border-left: 2px solid var(--orange); padding-left: 8px; margin-left: -10px; }
+
+    @media (max-width: 1100px) {
+      .frame-row { grid-template-columns: 1fr; }
+      .meta-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-name">Loop</span>
+        <span class="brand-sub">Library</span>
+        <span class="brand-crumb">/ templates</span>
+      </div>
+      <div></div>
+      <div class="topnav-actions">
+        <a class="btn" href="Loop Library.html" style="text-decoration:none;">← Back to Library</a>
+        <a class="btn" href="Sync Architecture.html" style="text-decoration:none;">Sync architecture</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="page-head">
+      <div class="eyebrow">templates / v0.1 · for backend &amp; Penpot wireframes</div>
+      <h1>Doc templates &amp; component primitives.</h1>
+      <p class="dek">Frame-style references for the three content surfaces you'll be modelling in the backend: the SOP template, the generic document template, and the comments thread. Each frame uses the Loop Library tokens (Geist + Monokai Pro Sun) and is annotated with the data fields it expects, so you can paste into Penpot and design the schema against it.</p>
+      <nav class="toc">
+        <a href="#sop"><span class="num">01</span> SOP template</a>
+        <span class="sep">·</span>
+        <a href="#doc"><span class="num">02</span> Document template</a>
+        <span class="sep">·</span>
+        <a href="#comments"><span class="num">03</span> Comments thread</a>
+      </nav>
+    </section>
+
+    <!-- ============ 01 SOP TEMPLATE ============ -->
+    <section id="sop" class="frame-block">
+      <div class="frame-head">
+        <div class="lhs">
+          <div class="eyebrow">01 · sop template</div>
+          <h2>Standard Operating Procedure</h2>
+        </div>
+        <div class="rhs">
+          <span class="dot"></span>
+          <span>type · SOP · 5 fields required</span>
+          <span style="color: var(--ink-4)">·</span>
+          <span>collection · /sops</span>
+        </div>
+      </div>
+
+      <div class="frame-row">
+        <div class="frame">
+          <span class="frame-tag">frame · sop · 1240 × auto</span>
+
+          <!-- Header slot row -->
+          <div class="stack">
+            <div class="slot"><span class="lbl">category · tag pill</span><span class="req req-req">required</span></div>
+            <div class="slot" style="padding: 20px;"><span class="lbl">title · h1 · 36–44px · max 80ch</span><span class="req req-req">required</span></div>
+            <div class="slot" style="padding: 14px;"><span class="lbl">summary · dek · 60ch · 1–2 sentences</span><span class="req req-opt">optional</span></div>
+          </div>
+
+          <!-- Metadata grid -->
+          <div class="meta-grid">
+            <div class="meta-cell"><span class="k">owner</span><span class="v">team · person</span></div>
+            <div class="meta-cell"><span class="k">on-call</span><span class="v">slack channel</span></div>
+            <div class="meta-cell"><span class="k">severity</span><span class="v">enum · sev1–sev4</span></div>
+            <div class="meta-cell"><span class="k">reviewed</span><span class="v">date · &lt; 90d</span></div>
+          </div>
+
+          <!-- Callout slot -->
+          <div style="margin-top: 18px; padding: 14px 16px; border-left: 3px solid var(--yellow); background: color-mix(in oklab, var(--yellow) 9%, var(--paper)); border-radius: 8px;">
+            <div class="mono" style="font-size: 11px; color: var(--yellow); letter-spacing: 0.08em; text-transform: uppercase;">callout · warning · optional</div>
+            <div style="font-size: 14px; color: var(--ink); margin-top: 4px;">Surface the most time-sensitive instruction here, above the fold.</div>
+          </div>
+
+          <!-- Section heading -->
+          <h3 style="font-size: 18px; margin: 28px 0 8px;">1. Section heading</h3>
+          <p style="font-size: 14px; color: var(--ink-3); margin: 0 0 8px;">A short framing paragraph explains the section's intent before the steps.</p>
+
+          <!-- Steps -->
+          <ol class="step-tpl">
+            <li>
+              <div>
+                <div class="b">Step title — verb + object</div>
+                <div class="d">One- or two-sentence body. Include the exact command, file path, or URL.</div>
+              </div>
+              <div class="role">role · ic</div>
+            </li>
+            <li>
+              <div>
+                <div class="b">Decision point — branching</div>
+                <div class="d">If &lt;condition&gt; → continue at step N. Else escalate to on-call.</div>
+              </div>
+              <div class="role">role · ic / oncall</div>
+            </li>
+            <li>
+              <div>
+                <div class="b">Verification step</div>
+                <div class="d">How to confirm success: a metric, a dashboard, a customer-facing signal.</div>
+              </div>
+              <div class="role">role · ic</div>
+            </li>
+          </ol>
+
+          <!-- Success callout -->
+          <div style="margin-top: 18px; padding: 14px 16px; border-left: 3px solid var(--green); background: color-mix(in oklab, var(--green) 8%, var(--paper)); border-radius: 8px;">
+            <div class="mono" style="font-size: 11px; color: var(--green); letter-spacing: 0.08em; text-transform: uppercase;">callout · success criteria · required</div>
+            <div style="font-size: 14px; color: var(--ink); margin-top: 4px;">A measurable definition of "done" for the procedure.</div>
+          </div>
+
+          <hr style="border: 0; border-top: 1px solid var(--line); margin: 28px 0;" />
+
+          <!-- Related row -->
+          <div class="mono" style="font-size: 11px; color: var(--ink-4); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;">related · array of doc refs</div>
+          <div class="slot"><span class="lbl">→ link to runbook, postmortem template, etc.</span><span class="req req-opt">0–6 items</span></div>
+        </div>
+
+        <!-- Annotations rail -->
+        <aside>
+          <div class="anno">
+            <div class="h"><span class="pin">A</span> Required header fields</div>
+            <div>Every SOP must have a category, title, owner, severity, and reviewed-date.</div>
+            <span class="field-key">fields → category, title, owner, severity, lastReviewedAt</span>
+          </div>
+          <div class="anno">
+            <div class="h"><span class="pin">B</span> Steps are first-class</div>
+            <div>Each step has a title, body, and a <code>role</code> assignment. Order is preserved as <code>index</code>.</div>
+            <span class="field-key">type → steps: Step[] · Step { id, title, body, role }</span>
+          </div>
+          <div class="anno">
+            <div class="h"><span class="pin">C</span> Callouts are typed</div>
+            <div>Warning, success, danger, info — the colour is computed from <code>kind</code>, not authored per-instance.</div>
+            <span class="field-key">enum → warning | success | danger | info</span>
+          </div>
+          <div class="anno">
+            <div class="h"><span class="pin">D</span> Review cadence</div>
+            <div>The library badges any SOP with <code>lastReviewedAt &gt; 90d</code> as <span class="mono" style="color: var(--red);">stale</span> on the home page.</div>
+            <span class="field-key">computed → isStale = now − lastReviewedAt &gt; 90d</span>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ============ 02 DOCUMENT TEMPLATE ============ -->
+    <section id="doc" class="frame-block">
+      <div class="frame-head">
+        <div class="lhs">
+          <div class="eyebrow">02 · document template</div>
+          <h2>Generic document</h2>
+        </div>
+        <div class="rhs">
+          <span class="dot" style="background: var(--blue)"></span>
+          <span>type · Document · 3 fields required</span>
+          <span style="color: var(--ink-4)">·</span>
+          <span>collection · /docs</span>
+        </div>
+      </div>
+
+      <div class="frame-row">
+        <div class="frame">
+          <span class="frame-tag">frame · document · 1240 × auto</span>
+
+          <div class="doc-tpl-header">
+            <div style="display: flex; gap: 8px;">
+              <span class="tag tag-blue">Category</span>
+              <span class="tag tag-yellow">Type · Manual / RFC / Memo</span>
+            </div>
+            <div class="doc-tpl-h1">Document title — h1, max two lines</div>
+            <p class="doc-tpl-dek">Optional 1–2 sentence summary that appears as the dek under the headline and as the snippet in search results.</p>
+            <div style="display: flex; gap: 18px; align-items: center; color: var(--ink-3); font-family: var(--font-mono); font-size: 12.5px; margin-top: 18px;">
+              <span style="display: inline-flex; gap: 8px; align-items: center;">
+                <span style="width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, var(--blue), var(--purple)); color: var(--paper); font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--line-strong);">AU</span>
+                <span style="color: var(--ink);">author · person ref</span>
+              </span>
+              <span>·</span>
+              <span>updated · relative date</span>
+              <span>·</span>
+              <span>reads · int</span>
+              <span>·</span>
+              <span style="display: inline-flex; gap: 6px; align-items: center; color: var(--green);">
+                <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--green);"></span>
+                verified · enum
+              </span>
+            </div>
+          </div>
+
+          <div class="frame-row" style="grid-template-columns: 1fr 200px; gap: 28px; align-items: start;">
+            <div>
+              <h3 style="font-size: 20px; margin: 0 0 10px;">Section heading · h2</h3>
+              <p style="font-size: 15px; color: var(--ink-2); margin: 0 0 12px; line-height: 1.7;">Body paragraph. Inline <code style="font-family: var(--font-mono); font-size: 0.88em; background: var(--bg-sunken); padding: 1px 5px; border-radius: 4px;">code</code>, <strong style="color: var(--ink);">bold</strong>, and <a style="color: var(--blue);">links</a> render with the same tokens as the rest of the library.</p>
+
+              <div class="slot" style="padding: 28px; flex-direction: column; align-items: stretch; gap: 6px;">
+                <span class="lbl" style="text-align: center;">image · figure · captioned</span>
+                <span class="mono" style="text-align: center; color: var(--ink-4); font-size: 11px;">aspect 16/9 · max-width 720 · alt required</span>
+              </div>
+
+              <h3 style="font-size: 16px; margin: 24px 0 8px;">Subsection · h3</h3>
+              <ul style="padding-left: 22px; color: var(--ink-2); font-size: 15px; line-height: 1.7; margin: 0;">
+                <li>Unordered list item — short, scannable.</li>
+                <li>Ordered, unordered, and task lists all share base styles.</li>
+                <li>Long lists collapse after 8 items in the reader (optional).</li>
+              </ul>
+
+              <div style="margin: 20px 0; padding: 14px 16px; border-left: 3px solid var(--orange); background: color-mix(in oklab, var(--orange) 8%, var(--paper)); border-radius: 8px;">
+                <div class="mono" style="font-size: 11px; color: var(--orange); letter-spacing: 0.08em; text-transform: uppercase;">callout · info · optional</div>
+                <div style="font-size: 14px; color: var(--ink); margin-top: 4px;">Reusable across all doc types. Authored per-instance; styled by <code style="font-family: var(--font-mono); font-size: 0.88em;">kind</code>.</div>
+              </div>
+
+              <div style="margin-top: 22px; padding: 16px 18px; background: var(--bg-elevated); border: 1px solid var(--line); border-radius: 10px;">
+                <div class="mono" style="font-size: 11px; color: var(--ink-4); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;">block · code · syntax-highlighted</div>
+                <pre style="margin: 0; font-family: var(--font-mono); font-size: 12.5px; color: var(--ink); white-space: pre-wrap;"><span style="color: var(--purple);">curl</span> -X POST https://api.loop.example/docs/{id}/star \
+  -H <span style="color: var(--green);">"Authorization: Bearer $TOKEN"</span></pre>
+              </div>
+            </div>
+
+            <div class="toc-side">
+              <div class="h">On this page</div>
+              <ul>
+                <li class="active">Section heading</li>
+                <li>Subsection</li>
+                <li>Another section</li>
+                <li>Related docs</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <aside>
+          <div class="anno">
+            <div class="h"><span class="pin">A</span> One renderer, many types</div>
+            <div>Manuals, RFCs, memos all share this template; type drives the tag colour and any type-specific badges.</div>
+            <span class="field-key">discriminator → type ∈ {manual, rfc, memo, checklist}</span>
+          </div>
+          <div class="anno">
+            <div class="h"><span class="pin">B</span> Block tree storage</div>
+            <div>Body is stored as an ordered tree of blocks: <code>heading</code>, <code>paragraph</code>, <code>list</code>, <code>image</code>, <code>code</code>, <code>callout</code>, <code>quote</code>, <code>divider</code>.</div>
+            <span class="field-key">body → Block[] · jsonb</span>
+          </div>
+          <div class="anno">
+            <div class="h"><span class="pin">C</span> TOC is derived</div>
+            <div>The right-rail TOC is built from <code>heading</code> blocks at depth ≤ 3. Don't store separately.</div>
+            <span class="field-key">computed → toc(body)</span>
+          </div>
+          <div class="anno">
+            <div class="h"><span class="pin">D</span> Verification badge</div>
+            <div><code>verified</code> is set when an owner re-attests within 90 days; otherwise <code>stale</code>; <code>unverified</code> for new docs.</div>
+            <span class="field-key">enum → verified | stale | unverified</span>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ============ 03 COMMENTS THREAD ============ -->
+    <section id="comments" class="frame-block">
+      <div class="frame-head">
+        <div class="lhs">
+          <div class="eyebrow">03 · comments thread</div>
+          <h2>Comments &amp; suggestions</h2>
+        </div>
+        <div class="rhs">
+          <span class="dot" style="background: var(--purple)"></span>
+          <span>type · Comment · attached to doc / block</span>
+          <span style="color: var(--ink-4)">·</span>
+          <span>collection · /comments</span>
+        </div>
+      </div>
+
+      <div class="frame-row">
+        <div class="frame">
+          <span class="frame-tag">frame · comments · 1240 × auto</span>
+
+          <div class="mono" style="font-size: 11px; color: var(--ink-4); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px;">thread · anchored to block #b7 “Stabilize”</div>
+
+          <div class="comments">
+            <!-- 1. Open comment -->
+            <div class="comment">
+              <span class="av" style="background: linear-gradient(135deg, var(--green), var(--blue));">JK</span>
+              <div>
+                <div class="hd">
+                  <span class="name">Jordan Kessler</span>
+                  <span class="when">2 hours ago</span>
+                </div>
+                <div class="body">
+                  Should we mention the regional failover playbook here? The line about <mark>"failover to the secondary region"</mark> assumes the reader knows where that runbook lives.
+                </div>
+                <div class="actions">
+                  <span>Reply</span><span class="sep">·</span>
+                  <span>React</span><span class="sep">·</span>
+                  <span class="react">👍 2</span>
+                  <span class="react">👀 1</span>
+                  <span style="margin-left: auto; color: var(--ink-4);">comment · id c_98ka1</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 1.1 Reply -->
+            <div class="comment reply">
+              <span class="av" style="background: linear-gradient(135deg, var(--blue), var(--purple));">AM</span>
+              <div>
+                <div class="hd">
+                  <span class="name">Aarav Mehta</span>
+                  <span class="when">1 hour ago</span>
+                </div>
+                <div class="body">
+                  Good call — I'll add a related-doc link to <a style="color: var(--blue);">Edge failover</a>. Will push the edit through the library.
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Suggestion -->
+            <div class="comment suggestion">
+              <span class="av" style="background: linear-gradient(135deg, var(--yellow), var(--orange));">RS</span>
+              <div>
+                <div class="hd">
+                  <span class="name">Riya Sundar</span>
+                  <span class="badge sug">Suggestion · Google Docs</span>
+                  <span class="when">yesterday</span>
+                </div>
+                <div class="body">
+                  Replace <mark>"15 minutes"</mark> with <strong style="color: var(--green);">"10 minutes"</strong>. We tightened the SLO last sprint.
+                </div>
+                <div class="actions">
+                  <span style="color: var(--green);">Accept</span><span class="sep">·</span>
+                  <span style="color: var(--red);">Reject</span><span class="sep">·</span>
+                  <span>Comment</span>
+                  <span style="margin-left: auto; color: var(--ink-4);">suggestion · id s_3pq22</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Resolved -->
+            <div class="comment resolved">
+              <span class="av" style="background: linear-gradient(135deg, var(--purple), var(--red));">NO</span>
+              <div>
+                <div class="hd">
+                  <span class="name">Noa Okafor</span>
+                  <span class="badge res">Resolved</span>
+                  <span class="when">2 days ago · by Aarav</span>
+                </div>
+                <div class="body">
+                  Typo: "platfom" → "platform". Fixed in revision <code style="font-family: var(--font-mono); font-size: 0.85em; background: var(--bg-sunken); padding: 1px 5px; border-radius: 3px;">r_412</code>.
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. Composer (empty state) -->
+            <div class="comment-composer">
+              <span class="av" style="background: linear-gradient(135deg, var(--orange), var(--red));">YO</span>
+              <div>
+                <div class="hd" style="margin-bottom: 6px;">
+                  <span class="name">You</span>
+                  <span class="badge draft">Draft · not yet posted</span>
+                </div>
+                <textarea class="composer-input" placeholder="Add a comment, mention @someone, or paste a Google Docs suggestion…"></textarea>
+                <div class="composer-toolbar">
+                  <div class="tools">
+                    <span>@ mention</span>
+                    <span>📎 attach</span>
+                    <span>🔗 link</span>
+                    <span>↑ suggestion</span>
+                  </div>
+                  <button class="btn primary" style="font-size: 12.5px;">Post comment <span class="kbd" style="background: rgba(250,244,206,0.2); border-color: rgba(250,244,206,0.2); color: var(--bg);">⌘↵</span></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside>
+          <div class="anno">
+            <div class="h"><span class="pin">A</span> Anchored to a block</div>
+            <div>Every thread points at a single block id in the parent doc. If the block is deleted in Docs, the thread becomes <code>orphaned</code> and shows in the side panel only.</div>
+            <span class="field-key">fields → docId, blockId, anchorRange?</span>
+          </div>
+          <div class="anno">
+            <div class="h"><span class="pin">B</span> Three states</div>
+            <div><code>open</code>, <code>resolved</code>, <code>orphaned</code>. Resolved threads collapse but are never deleted.</div>
+            <span class="field-key">enum → open | resolved | orphaned</span>
+          </div>
+          <div class="anno">
+            <div class="h"><span class="pin">C</span> Two kinds of comment</div>
+            <div>Plain <code>comment</code> lives in Loop only. <code>suggestion</code> mirrors a Google Docs suggestion and round-trips through the sync.</div>
+            <span class="field-key">enum → comment | suggestion</span>
+          </div>
+          <div class="anno">
+            <div class="h"><span class="pin">D</span> Reactions are first-class</div>
+            <div>Stored as a <code>{emoji, userId[]}</code> map per comment — not as nested comments. Lets us deduplicate the "+1" noise that Google Docs generates.</div>
+            <span class="field-key">reactions → Record&lt;emoji, userId[]&gt;</span>
+          </div>
+          <div class="anno">
+            <div class="h"><span class="pin">E</span> Realtime</div>
+            <div>Thread updates are pushed over the same channel the doc body uses, so the reader sees new comments without polling.</div>
+            <span class="field-key">channel → doc:{docId}</span>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <footer class="foot" style="margin-top: 80px;">
+      <div class="left">
+        <span class="sun-stripe">
+          <i style="background:var(--yellow);width:10px;height:4px;display:inline-block;border-radius:1px;"></i>
+          <i style="background:var(--orange);width:10px;height:4px;display:inline-block;border-radius:1px;margin-left:4px;"></i>
+          <i style="background:var(--red);width:10px;height:4px;display:inline-block;border-radius:1px;margin-left:4px;"></i>
+          <i style="background:var(--purple);width:10px;height:4px;display:inline-block;border-radius:1px;margin-left:4px;"></i>
+          <i style="background:var(--blue);width:10px;height:4px;display:inline-block;border-radius:1px;margin-left:4px;"></i>
+          <i style="background:var(--green);width:10px;height:4px;display:inline-block;border-radius:1px;margin-left:4px;"></i>
+        </span>
+        <span>loop / library · templates v0.1 · for penpot &amp; backend</span>
+      </div>
+      <div>3 frames · 13 annotations · ready for handoff</div>
+    </footer>
+  </main>
+</body>
+</html>
