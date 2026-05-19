@@ -5,6 +5,10 @@ const PORT = parseInt(process.env.PORT ?? '8080')
 
 const server = Bun.serve({
   port: PORT,
+  // Bun's default is 10s. /reindex and /sync can take much longer when
+  // exporting docs, fetching images, and writing to Firestore. Match
+  // Cloud Run's default request timeout (5 min).
+  idleTimeout: 255,
   async fetch(req: Request): Promise<Response> {
     try {
       return await router(req)
