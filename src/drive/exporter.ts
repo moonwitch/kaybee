@@ -129,6 +129,9 @@ export async function getFileMeta(fileId: string): Promise<{
 /**
  * Walks up the parent chain. Returns "Operations/Runbooks" style path.
  * Bounded depth so a cycle (shouldn't happen, but) can't loop forever.
+ *
+ * Skips depth 0 (the file itself) and the topmost ancestor (the Shared Drive
+ * root, identified by having no parents) — the drive is not a category.
  */
 export async function resolveFolderPath(fileId: string): Promise<string> {
   const segments: string[] = []
@@ -144,7 +147,7 @@ export async function resolveFolderPath(fileId: string): Promise<string> {
     const name = response.data.name ?? ''
     const parents = response.data.parents ?? []
 
-    if (depth > 0) segments.unshift(name)
+    if (depth > 0 && parents.length > 0) segments.unshift(name)
     if (!parents.length) break
     currentId = parents[0]!
   }
