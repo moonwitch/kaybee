@@ -12,7 +12,7 @@ export interface ErrorOpts {
 
 export function renderError(opts: ErrorOpts): string {
   const body = `
-${topbar({ crumb: String(opts.code) })}
+${topbar()}
 
 <main class="container">
 
