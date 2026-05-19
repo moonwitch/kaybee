@@ -105,13 +105,6 @@ kbd { font: inherit; }
   padding-left: 10px;
   border-left: 1px solid var(--line-strong);
 }
-.brand-crumb {
-  color: var(--ink-3);
-  font-family: var(--font-mono);
-  font-size: 12.5px;
-  margin-left: 8px;
-  white-space: nowrap;
-}
 .brand { white-space: nowrap; }
 
 .topnav-actions { display: flex; align-items: center; gap: 10px; }
@@ -252,6 +245,7 @@ p { margin: 0; color: var(--ink-2); }
   gap: 28px;
   align-items: end;
 }
+.hero-content { display: contents; }
 .hero-top {
   display: flex; align-items: center; gap: 14px;
   color: var(--ink-3);
@@ -267,6 +261,34 @@ p { margin: 0; color: var(--ink-2); }
   font-size: 13px; font-family: var(--font-mono);
 }
 .hero-meta b { color: var(--ink); font-weight: 600; }
+
+.hero.has-backdrop {
+  position: relative;
+  padding: 56px 36px 36px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  overflow: hidden;
+  isolation: isolate;
+}
+.hero.has-backdrop .hero-content {
+  display: grid;
+  gap: 24px;
+  position: relative;
+  z-index: 1;
+}
+.hero.has-backdrop h1 {
+  font-size: clamp(36px, 5vw, 64px);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+.hero-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
 
 /* ---------- Tags / chips ---------- */
 .tag {
@@ -642,35 +664,3 @@ p { margin: 0; color: var(--ink-2); }
 /* Icon stroke util */
 .icon { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 
-/* ---------- Hero image placeholder ---------- */
-.hero-image-placeholder {
-  width: 100%;
-  height: 240px;
-  border-radius: var(--radius-lg);
-  background: linear-gradient(135deg,
-    color-mix(in oklab, var(--yellow) 20%, var(--bg-sunken)),
-    color-mix(in oklab, var(--orange) 15%, var(--bg-sunken))
-  );
-  border: 1px solid var(--line);
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--ink-4);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-}
-.hero-image-placeholder::after {
-  content: "hero image";
-  text-transform: uppercase;
-}
-
-/* When a real image is provided */
-.hero-image {
-  width: 100%;
-  max-height: 360px;
-  object-fit: cover;
-  border-radius: var(--radius-lg);
-  margin-bottom: 12px;
-}
