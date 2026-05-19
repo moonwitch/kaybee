@@ -1,14 +1,7 @@
-FROM oven/bun:1 AS base
+FROM oven/bun:1-alpine
 WORKDIR /app
-
-FROM base AS install
 COPY package.json bun.lock* ./
-RUN bun install --frozen-lockfile
-
-FROM base AS release
-COPY --from=install /app/node_modules node_modules
-COPY . .
-
-USER bun
+RUN bun install --frozen-lockfile --production
+COPY src ./src
 EXPOSE 8080
-ENTRYPOINT ["bun", "run", "src/server/index.ts"]
+CMD ["bun", "src/server/index.ts"]

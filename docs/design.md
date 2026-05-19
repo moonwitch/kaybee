@@ -8,7 +8,7 @@ The `/lookbook/` folder is the design authority. All visual decisions are alread
 
 | File | Purpose |
 |---|---|
-| `lookbook/styles.css` | Single CSS file — all tokens, components, layout. Copy to `public/styles.css`. |
+| `lookbook/styles.css` | Single CSS file — all tokens, components, layout. Copy to `src/server/assets/styles.css`. |
 | `lookbook/Loop Library.html` | Main library view — home, category browse, card grid, activity feed. |
 | `lookbook/Templates.html` | Reader / article view and granular components. |
 | `lookbook/Sync Architecture.html` | Internal architecture diagram (reference only). |
@@ -61,7 +61,7 @@ The home page is missing a hero image at the top. For MVP, add a placeholder. Fo
 ```
 
 ```css
-/* In public/styles.css */
+/* In src/server/assets/styles.css */
 .hero-image-placeholder {
   width: 100%;
   height: 280px;
@@ -86,28 +86,28 @@ The home page is missing a hero image at the top. For MVP, add a placeholder. Fo
 
 > For non-technical users. Read this before asking an AI to change anything visual.
 
-**The one file to edit for all visual changes: `public/styles.css`**
+**The one file to edit for all visual changes: `src/server/assets/styles.css`**
 
 ### Change the colour palette
-Open `public/styles.css`. Edit the values inside `:root { }` at the top. Every component inherits from these variables — you only need to change them in one place.
+Open `src/server/assets/styles.css`. Edit the values inside `:root { }` at the top. Every component inherits from these variables — you only need to change them in one place.
 
 ### Change the fonts
-1. Find the `<link href="https://fonts.googleapis.com/...">` tag in `src/server/templates/base.html`
+1. Find the `<link href="https://fonts.googleapis.com/...">` tag in `src/server/partials/layout.ts`
 2. Replace `Geist` with your preferred Google Font name
-3. Update `--font-sans` (and optionally `--font-mono`) in the `:root` block of `public/styles.css`
+3. Update `--font-sans` (and optionally `--font-mono`) in the `:root` block of `src/server/assets/styles.css`
 
 ### Add a new page section
 1. Open one of the lookbook HTML files and find a section that looks like what you want
 2. Copy the `<section class="section">...</section>` block
-3. Paste it into the relevant template in `src/server/templates/`
+3. Paste it into the relevant view in `src/server/views/` (one file per page)
 4. Use existing CSS classes only: `.doc-card`, `.cat-tile`, `.tag`, `.btn`, `.activity-row`, etc.
 5. Do not write new CSS unless no existing class fits
 
 ### Add the hero image
-Replace `<div class="hero-image-placeholder">` with `<img class="hero-image" src="/public/your-image.jpg" alt="..." />` and update the CSS as shown above.
+Replace `<div class="hero-image-placeholder">` with `<img class="hero-image" src="/assets/your-image.jpg" alt="..." />` (drop the file into `src/server/assets/`) and update the CSS as shown above. The placeholder is rendered by the `hero` partial when `showImagePlaceholder: true` is passed — find it in `src/server/views/home.ts`.
 
 ### Change the site name or branding
-Search all files in `src/server/templates/` for `Loop` and `Library`. Replace with your preferred names. The logo mark (`.brand-mark`) is drawn in pure CSS — ask the AI to redesign it if needed.
+Edit `src/server/partials/topbar.ts` (brand block) and `src/server/partials/layout.ts` (title tag). The logo mark (`.brand-mark`) is drawn in pure CSS — ask the AI to redesign it if needed.
 
 ### Change the accent colour on a specific component
 Each component uses a CSS variable (e.g. `var(--green)`, `var(--orange)`). Ask the AI: *"Change the accent on doc cards from orange to blue"* and it will update the one or two class references involved.
@@ -129,10 +129,12 @@ Each component uses a CSS variable (e.g. `var(--green)`, `var(--orange)`). Ask t
 | How Drive docs are fetched | `src/drive/exporter.ts` |
 | How the sync trigger works | `src/sync/handler.ts` |
 | How Markdown becomes HTML | `src/render/markdown.ts` |
-| How pages and search work | `src/server/routes.ts` |
+| How pages and search work | `src/server/routes.ts` + `src/server/views/*.ts` |
+| Reusable HTML fragments (topbar, footer, cards) | `src/server/partials/*.ts` |
+| Calendar feed | `src/calendar/client.ts` |
 | How documents are stored/read | `src/firestore/docs.ts` |
 | How images are stored | `src/storage/assets.ts` |
-| How often the reconciler runs | The n8n scheduled workflow (no code — configure in n8n UI) |
+| How often the reconciler runs | The n8n scheduled workflow or Cloud Scheduler (no code — configured outside the repo) |
 
 ### What the AI should never do without being asked
 - Switch the database, runtime, or search engine
