@@ -18,7 +18,7 @@ export function renderCategory(
   const isRoot = segments.length === 0
 
   const body = `
-${topbar({ crumb: isRoot ? 'Categories' : title })}
+${topbar()}
 
 <main class="container">
 
