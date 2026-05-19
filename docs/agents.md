@@ -31,7 +31,7 @@ Kaybee is a showcase project. It must sync in near-real-time, look great, and be
 | Ingestion | Google Drive API — `drive.files.export` for Docs/Slides/Sheets; Forms = link-only |
 | Calendar | Google Calendar API (read-only) |
 
-See `arch.md` (same folder) for the sync pipeline. See `design.md` for visual rules.
+See `arch.md` (same folder) for the sync pipeline, `design.md` for visual rules, and `users.md` for how non-technical staff actually use the site.
 
 ---
 
@@ -98,6 +98,7 @@ Firestore, GCS, Drive, and Calendar authenticate implicitly via the runtime serv
 | `GCS_BUCKET` | Asset storage bucket |
 | `ROOT_FOLDER_ID` | Root Google Drive folder to sync |
 | `SYNC_SECRET` | Shared secret — validates `/sync/*` and `/reindex` |
+| `SHARED_DRIVE_NAME` | Title rendered in the home hero (optional; defaults to "Loop Library") |
 | `CALENDAR_IDS` | Comma-separated calendar IDs (optional) |
 
 Local dev additionally needs `GOOGLE_APPLICATION_CREDENTIALS` pointing at a service-account JSON file in the repo root.
