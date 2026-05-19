@@ -1,24 +1,14 @@
-# Use the latest Node 24 LTS Alpine image for a small footprint
-FROM node:24-alpine
+FROM oven/bun:1 AS base
+WORKDIR /app
 
-# Set the working directory
-WORKDIR /usr/src/app
+FROM base AS install
+COPY package.json bun.lock* ./
+RUN bun install --frozen-lockfile
 
-# Copy package files first to leverage Docker layer caching
-COPY package*.json ./
-
-# Install production dependencies only
-RUN npm install --only=production
-
-# Copy the rest of your application code
+FROM base AS release
+COPY --from=install /app/node_modules node_modules
 COPY . .
 
-# Set production environment and Cloud Run port
-ENV NODE_ENV=production
-ENV PORT=8080
-
-# Expose port 8080 (Cloud Run's default)
+USER bun
 EXPOSE 8080
-
-# Run the application
-CMD [ "node", "app.js" ]
+ENTRYPOINT ["bun", "run", "src/server/index.ts"]

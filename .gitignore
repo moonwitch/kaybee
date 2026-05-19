@@ -6,7 +6,7 @@ node_modules/
 
 # Secrets & Service Accounts
 # Using a wildcard to catch any JSON key files
-*.json
+service-account.json
 !package.json
 !package-lock.json
 
