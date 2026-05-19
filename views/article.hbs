@@ -19,6 +19,13 @@
             </div>
 
             <div class="nav-actions">
+                {{#if user}}
+                <div class="user-profile-mini">
+                    {{#if user.photos.0.value}}
+                    <img src="{{user.photos.0.value}}" alt="Profile picture" class="avatar-mini">
+                    {{/if}}
+                </div>
+                {{/if}}
                 <a href="https://docs.google.com/document/d/{{docId}}/edit" target="_blank" class="btn-brutal">
                     EDIT DOC ↗
                 </a>

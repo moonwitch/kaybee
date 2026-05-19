@@ -1,0 +1,33 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/kaybee', '.']
+    
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/kaybee']
+    
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'kaybee'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/kaybee'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      # Keep --allow-unauthenticated because the app itself enforces authentication now
+      - '--allow-unauthenticated' 
+      - '--set-secrets'
+      # Mount the authentication & environment secrets from Secret Manager
+      - 'GOOGLE_CLIENT_ID=kaybee-google-client-id:latest,GOOGLE_CLIENT_SECRET=kaybee-google-client-secret:latest,SESSION_SECRET=kaybee-session-secret:latest,ROOT_FOLDER_ID=kaybee-root-folder-id:latest'
+      # Note: For Google Drive access, either assign the appropriate Service Account 
+      # Identity to the Cloud Run service, or inject GOOGLE_APPLICATION_CREDENTIALS 
+      # as a volume mount secret. 
+      # e.g., --update-secrets=/app/secret/service-account.json=kaybee-service-account:latest
+images:
+  - 'gcr.io/$PROJECT_ID/kaybee'

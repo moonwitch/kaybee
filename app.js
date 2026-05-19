@@ -7,6 +7,9 @@ const hbs = require("hbs");
 const compression = require("compression");
 const NodeCache = require("node-cache");
 const axios = require("axios");
+const session = require("express-session");
+const passport = require("passport");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const {
   getWikiData,
   getDocContent,
@@ -23,6 +26,59 @@ const myCache = new NodeCache({ stdTTL: 3600 }); // 1 hour default cache
 app.use(compression());
 app.set("view engine", "hbs");
 app.use(express.static("public"));
+
+// Auth Setup
+// For Cloud Run, trust first proxy is needed if HTTPS is terminated at load balancer
+app.set("trust proxy", 1); 
+
+app.use(session({
+  secret: process.env.SESSION_SECRET || "dev_secret_key",
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: process.env.NODE_ENV === "production" }
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((user, done) => done(null, user));
+
+passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: "/auth/google/callback"
+  },
+  function(accessToken, refreshToken, profile, cb) {
+    return cb(null, profile);
+  }
+));
+
+function ensureAuthenticated(req, res, next) {
+  if (req.isAuthenticated()) return next();
+  res.redirect('/login');
+}
+
+// Auth Routes
+app.get('/login', (req, res) => {
+  if (req.isAuthenticated()) return res.redirect('/');
+  res.render('login', { layout: false });
+});
+
+app.get('/auth/google',
+  passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+app.get('/auth/google/callback', 
+  passport.authenticate('google', { failureRedirect: '/login' }),
+  function(req, res) {
+    res.redirect('/');
+  });
+
+app.get('/logout', (req, res, next) => {
+  req.logout((err) => {
+    if (err) return next(err);
+    res.redirect('/login');
+  });
+});
 
 // --- IMAGE PROXY ROUTE ---
 // Solves slow LCP by serving Google images through our server with cache headers
@@ -69,16 +125,16 @@ warmUpCache();
 setInterval(warmUpCache, 10 * 60 * 1000);
 
 // Dashboard Route
-app.get("/", async (req, res) => {
+app.get("/", ensureAuthenticated, async (req, res) => {
   try {
     // Check if we have warmed-up dashboard data
     const cachedDashboard = myCache.get("dashboard_data");
     if (cachedDashboard) {
-      return res.render("index", { categories: cachedDashboard });
+      return res.render("index", { categories: cachedDashboard, user: req.user });
     }
 
     const categories = await getWikiData(ROOT_ID);
-    res.render("index", { categories });
+    res.render("index", { categories, user: req.user });
   } catch (err) {
     console.error("Dashboard Error:", err);
     res.status(500).send("Drive Error: " + err.message);
@@ -86,11 +142,11 @@ app.get("/", async (req, res) => {
 });
 
 // Article Route with Multi-layer Caching & Comments
-app.get("/doc/:id", async (req, res) => {
+app.get("/doc/:id", ensureAuthenticated, async (req, res) => {
   const cacheKey = `doc_full_${req.params.id}`;
   const cached = myCache.get(cacheKey);
 
-  if (cached) return res.render("article", cached);
+  if (cached) return res.render("article", { ...cached, user: req.user });
 
   try {
     // Fetch all required data in parallel
@@ -116,7 +172,7 @@ app.get("/doc/:id", async (req, res) => {
     };
 
     myCache.set(cacheKey, data);
-    res.render("article", data);
+    res.render("article", { ...data, user: req.user });
   } catch (err) {
     // Logs to Cloud Logging so you can see it in the GCP Console
     console.error(`Error fetching doc ${req.params.id}:`, err.message);

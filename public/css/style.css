@@ -1,7 +1,7 @@
 :root {
-    /* Colors - Morandi Palette */
-    --m-bg: #f2eee9;
-    --m-surface: #e5e0d8;
+    /* Colors - Morandi Palette Refined */
+    --m-bg: #f5f2ef;
+    --m-surface: rgba(255, 255, 255, 0.7);
     --m-border: #4a454d;
     --m-text: #5b545d;
     --m-accent-green: #8a9a85;
@@ -19,9 +19,10 @@
     --thick-border: 2px solid var(--m-border);
     --thin-border: 1px solid var(--m-border);
     --shadow-hard: 4px 4px 0px 0px var(--m-border);
+    --shadow-soft: 0 10px 30px rgba(0,0,0,0.05);
 
     /* Animation */
-    --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;700;800&display=swap");
@@ -56,10 +57,65 @@ h3,
 }
 
 /* Header */
-header {
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: 3rem 0;
     border-bottom: var(--thick-border);
     margin-bottom: 3rem;
+}
+
+.header-titles h1 { margin: 0; }
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: var(--m-surface);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 10px 20px;
+    border: var(--thin-border);
+    box-shadow: var(--shadow-soft);
+}
+
+.avatar {
+    width: 40px;
+    height: 40px;
+    border: 2px solid var(--m-border);
+    object-fit: cover;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-name {
+    font-weight: var(--font-weight-bold);
+    font-size: 0.9rem;
+    color: var(--m-text);
+}
+
+.logout-link {
+    font-size: 0.75rem;
+    color: var(--m-accent-rose);
+    text-decoration: none;
+    font-weight: var(--font-weight-bold);
+}
+.logout-link:hover { text-decoration: underline; }
+
+.user-profile-mini {
+    display: flex;
+    align-items: center;
+}
+
+.avatar-mini {
+    width: 30px;
+    height: 30px;
+    border: 2px solid var(--m-border);
+    object-fit: cover;
 }
 
 .header-subtitle {
@@ -74,7 +130,9 @@ header {
     display: flex;
     align-items: center;
     border: var(--thick-border);
-    background: white;
+    background: var(--m-surface);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     padding: 0.5rem 1.5rem;
     margin-bottom: 4rem;
     box-shadow: var(--shadow-hard);
@@ -140,7 +198,8 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.2rem 0;
+    padding: 1.2rem 1rem;
+    margin-bottom: 0.5rem;
     border-bottom: var(--thin-border);
     text-decoration: none;
     color: inherit;
@@ -149,7 +208,10 @@ header {
 
 .doc-link:hover {
     color: var(--m-accent-rose);
-    padding-left: 1rem;
+    background: var(--m-surface);
+    border-color: transparent;
+    box-shadow: var(--shadow-soft);
+    transform: translateX(5px);
 }
 
 .doc-link .arrow {
@@ -171,11 +233,19 @@ header {
 
 /* Article Page */
 main {
-    background: white;
+    background: var(--m-surface);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: var(--thick-border);
     box-shadow: var(--shadow-hard);
     padding: 5rem;
     margin-bottom: 4rem;
+}
+
+.nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
 }
 
 .breadcrumb-nav {
@@ -240,11 +310,18 @@ main {
 }
 
 .comment-card {
-    background: var(--m-surface);
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(10px);
     border: var(--thin-border);
     padding: 1.5rem;
     margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-soft);
+    transition: var(--transition-smooth);
+}
+
+.comment-card:hover {
     box-shadow: 4px 4px 0px var(--m-border);
+    transform: translateY(-2px);
 }
 
 .comment-author {

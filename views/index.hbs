@@ -9,9 +9,23 @@
 <body>
 
     <div class="stack-80">
-        <header>
-            <h1>KAYBEE</h1>
-            <p class="header-subtitle">Internal Knowledge Base // {{categories.length}} Categories</p>
+        <header class="app-header">
+            <div class="header-titles">
+                <h1>KAYBEE</h1>
+                <p class="header-subtitle">Internal Knowledge Base // {{categories.length}} Categories</p>
+            </div>
+            
+            {{#if user}}
+            <div class="user-profile">
+                {{#if user.photos.0.value}}
+                <img src="{{user.photos.0.value}}" alt="Profile picture" class="avatar">
+                {{/if}}
+                <div class="user-info">
+                    <span class="user-name">{{user.displayName}}</span>
+                    <a href="/logout" class="logout-link">Logout</a>
+                </div>
+            </div>
+            {{/if}}
         </header>
 
         <section class="search-container">
