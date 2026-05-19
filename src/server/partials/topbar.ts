@@ -1,7 +1,6 @@
-import { escHtml, escAttr } from '../lib/html.ts'
+import { escAttr } from '../lib/html.ts'
 
 export interface TopbarOpts {
-  crumb?: string
   query?: string
 }
 
@@ -12,7 +11,6 @@ export function topbar(opts: TopbarOpts = {}): string {
       <span class="brand-mark" aria-hidden="true"></span>
       <b class="brand-name">Loop</b>
       <small class="brand-sub">Library</small>
-      ${opts.crumb ? `<small class="brand-crumb">/ ${escHtml(opts.crumb)}</small>` : ''}
     </a>
     <nav class="topnav-links" aria-label="Primary">
       <a href="/">Library</a>
