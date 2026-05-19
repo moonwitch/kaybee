@@ -6,12 +6,15 @@
 Google Docs (edited by Loopers)
   │
   └─ n8n — Google Drive trigger
-       └─ POST /sync/:docId  →  Cloud Run
+       └─ POST /sync/:fileId  →  Cloud Run
              ├─ drive.files.export  →  text/markdown
              ├─ strip base64 data: image strings
              ├─ fetch real images via Drive API
              │     └─ SHA-256 hash → upload to GCS → rewrite URL in Markdown
-             └─ upsert to Firestore
+             ├─ resolve folder path (skips the Shared Drive root —
+             │   the drive itself is never a category)
+             └─ upsert to Firestore (also tokenises title → keywords
+                  and extracts inline #tags from the body)
 ```
 
 ---
@@ -20,12 +23,14 @@ Google Docs (edited by Loopers)
 
 | Step | What happens |
 |---|---|
-| 1 | n8n detects a Drive change, POSTs `{ docId, folderId }` to `/sync/:docId` |
-| 2 | Cloud Run calls `drive.files.export(docId, 'text/markdown')` → raw Markdown string |
+| 1 | n8n detects a Drive change, POSTs to `/sync/:fileId` |
+| 2 | Cloud Run calls `drive.files.export(fileId, 'text/markdown')` (or the equivalent for Slides/Sheets/Forms) → raw Markdown string |
 | 3 | Strip all `data:` base64 strings from the Markdown (storage + token limit guardrail) |
 | 4 | For each real image: fetch via Drive API → SHA-256 hash → upload to GCS at `/a/<hash>` → rewrite `src` in Markdown |
-| 5 | Upsert document to Firestore: `{ id, title, folderPath, markdown, updatedAt, driveId }` |
-| 6 | HTML rendered from stored Markdown at serve time (or cached in the same Firestore doc) |
+| 5 | Resolve `folderPath` by walking parents; the Shared Drive root (no parents) is dropped so it never appears as a category |
+| 6 | Tokenise title → `keywords[]` and extract inline `#tags` from the body |
+| 7 | Upsert document to Firestore (see schema below) |
+| 8 | HTML rendered from stored Markdown at serve time |
 
 **Target latency:** Drive edit → visible in Kaybee in under 10 seconds.
 
@@ -41,8 +46,9 @@ A second n8n workflow runs on a schedule (every 5–15 minutes). It lists all fi
 
 | File | Responsibility |
 |---|---|
-| `src/sync/handler.ts` | `/sync/:docId` endpoint — entry point for n8n trigger |
-| `src/drive/exporter.ts` | `drive.files.export` call + base64 strip |
+| `src/sync/handler.ts` | `/sync/:fileId` + `/reindex` endpoints — entry points for n8n / Cloud Scheduler |
+| `src/drive/indexer.ts` | Recursive Drive listing (Shared Drive scan or folder BFS); shortcut dereferencing |
+| `src/drive/exporter.ts` | `drive.files.export` call + base64 strip; folder-path resolution |
 | `src/storage/assets.ts` | Image fetch → GCS upload → URL rewrite |
 | `src/firestore/docs.ts` | Firestore read/write for documents |
 | `src/render/markdown.ts` | Markdown → HTML (`marked`) |
@@ -55,15 +61,18 @@ A second n8n workflow runs on a schedule (every 5–15 minutes). It lists all fi
 ```ts
 interface KaybeeDoc {
   id: string;           // Google Drive file ID
-  title: string;
-  folderPath: string;   // e.g. "ops/runbooks"
-  markdown: string;     // cleaned Markdown (no base64)
-  updatedAt: Timestamp;
   driveId: string;      // same as id, kept for clarity
+  title: string;
+  folderPath: string;   // e.g. "Operations/Runbooks" — never includes the drive root
+  markdown: string;     // cleaned Markdown (no base64)
+  keywords: string[];   // tokenised from title; powers /search
+  tags: string[];       // inline #tags extracted from the body; powers /tag/:tag
+  mimeType: string;     // original Drive mime — drives the "Open in …" button
+  updatedAt: Timestamp;
 }
 ```
 
-No migrations. Fields can be added freely — Firestore is schema-free.
+No migrations. Fields can be added freely — Firestore is schema-free. After a code change that affects how any of these fields are computed, run `POST /reindex` to backfill.
 
 ---
 
