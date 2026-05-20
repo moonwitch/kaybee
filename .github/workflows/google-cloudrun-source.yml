@@ -31,14 +31,15 @@ jobs:
           region: ${{ env.REGION }}
           project_id: ${{ env.PROJECT_ID }}
           source: ./
-          flags: '--service-account=${{ env.RUNTIME_SA }}'
+          flags: "--service-account=${{ env.RUNTIME_SA }}"
           env_vars: |
             GCP_PROJECT_ID=${{ env.PROJECT_ID }}
             GCS_BUCKET=${{ vars.GCS_BUCKET }}
             FIRESTORE_DATABASE_ID=${{ vars.FIRESTORE_DATABASE_ID }}
-            ROOT_FOLDER_ID=${{ vars.ROOT_FOLDER_ID }}
           secrets: |
+            CALENDAR_IDS=CALENDAR_IDS:latest
             SYNC_SECRET=SYNC_SECRET:latest
+            ROOT_FOLDER_ID=ROOT_FOLDER_ID:latest
 
       - name: Show deployed URL
         run: echo ${{ steps.deploy.outputs.url }}
