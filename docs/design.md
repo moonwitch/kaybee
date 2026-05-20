@@ -51,34 +51,15 @@ The `/lookbook/` folder is the design authority. All visual decisions are alread
 
 ---
 
-## Known Gap — Hero Image
+## Hero
 
-The home page is missing a hero image at the top. For MVP, add a placeholder. For production, replace with a real image.
+The home page hero renders the site title (from `SHARED_DRIVE_NAME`, defaults to "Loop Library") over an inline SVG gradient backdrop — no raster image, no external asset.
 
-```html
-<!-- Inside <div class="hero">, before <h1> -->
-<div class="hero-image-placeholder"></div>
-```
+- The backdrop is produced by the `hero` partial when called with `backdrop: true` (see `src/server/partials/hero.ts`). It's a `<svg>` with a yellow → orange → red linear gradient plus a soft paper-coloured radial highlight.
+- Only the home view enables the backdrop. Sub-pages (category, doc, tag, calendar) call `hero(...)` without `backdrop` so the layout stays plain.
+- Breadcrumb context lives in the per-page `<nav class="crumb">` (see `src/server/partials/breadcrumb.ts`). The header brand no longer carries a crumb — it was duplicating that nav.
 
-```css
-/* In src/server/assets/styles.css */
-.hero-image-placeholder {
-  width: 100%;
-  height: 280px;
-  border-radius: var(--radius-lg);
-  background: var(--bg-sunken);
-  margin-bottom: 28px;
-}
-
-/* When a real image is ready, swap to: */
-.hero-image {
-  width: 100%;
-  max-height: 360px;
-  object-fit: cover;
-  border-radius: var(--radius-lg);
-  margin-bottom: 28px;
-}
-```
+To retitle the home hero per environment, set `SHARED_DRIVE_NAME` in `.env` (local) or Cloud Run env vars (deploy). To tweak the gradient, edit the two `<linearGradient>` / `<radialGradient>` blocks in `hero.ts` — the stop colours reference the palette tokens (`var(--yellow)`, `var(--orange)`, `var(--red)`, `var(--paper)`), so a palette change automatically restyles the backdrop.
 
 ---
 
@@ -103,10 +84,16 @@ Open `src/server/assets/styles.css`. Edit the values inside `:root { }` at the t
 4. Use existing CSS classes only: `.doc-card`, `.cat-tile`, `.tag`, `.btn`, `.activity-row`, etc.
 5. Do not write new CSS unless no existing class fits
 
-### Add the hero image
-Replace `<div class="hero-image-placeholder">` with `<img class="hero-image" src="/assets/your-image.jpg" alt="..." />` (drop the file into `src/server/assets/`) and update the CSS as shown above. The placeholder is rendered by the `hero` partial when `showImagePlaceholder: true` is passed — find it in `src/server/views/home.ts`.
+### Restyle the hero backdrop
+The backdrop is an inline SVG inside `src/server/partials/hero.ts` (the `heroBackdrop()` function). It uses two gradient definitions — change the `stop-color` / `stop-opacity` values, or swap the two `<rect>` fills, and the home page picks it up on next reload. The colours reference palette tokens (`var(--yellow)`, etc.), so a palette change in `styles.css` already restyles it.
 
-### Change the site name or branding
+### Use a raster image instead of the SVG backdrop
+Drop the file into `src/server/assets/`. In `hero.ts`, replace the inline `<svg class="hero-backdrop">` with `<img class="hero-backdrop" src="/assets/your-image.jpg" alt="" />`. The existing `.hero-backdrop` CSS already covers it (`inset: 0; width: 100%; height: 100%`), so no CSS change needed.
+
+### Change the site name shown in the hero
+Set `SHARED_DRIVE_NAME` in `.env` locally, or in Cloud Run env vars on deploy. The home view reads it at request time — no code change. Falls back to "Loop Library" when unset.
+
+### Change the brand mark / header branding
 Edit `src/server/partials/topbar.ts` (brand block) and `src/server/partials/layout.ts` (title tag). The logo mark (`.brand-mark`) is drawn in pure CSS — ask the AI to redesign it if needed.
 
 ### Change the accent colour on a specific component

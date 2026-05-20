@@ -12,7 +12,7 @@ Internal wiki + intranet for Loop Earplugs. Turns the company Google Drive into 
 - **Source:** Google Drive API (Docs/Slides/Sheets/Forms) + Calendar API
 - **Hosting:** Cloud Run, `europe-west4`
 
-See `docs/arch.md` for the sync pipeline, `docs/design.md` for visual conventions, and `docs/agents.md` for AI agent guidance.
+See `docs/users.md` for the end-user guide, `docs/arch.md` for the sync pipeline, `docs/design.md` for visual conventions, and `docs/agents.md` for AI agent guidance.
 
 ---
 
@@ -68,6 +68,7 @@ This is what n8n calls on every Drive change for near-instant updates.
 | `GCS_BUCKET` | ✓ | Bucket for image assets — public-access-prevention enforced |
 | `ROOT_FOLDER_ID` | ✓ | The Drive folder this instance serves |
 | `SYNC_SECRET` | ✓ | Shared secret for `/sync/*` and `/reindex` |
+| `SHARED_DRIVE_NAME` |   | Title shown in the home hero. Defaults to "Loop Library". Set per-deploy in Cloud Run. |
 | `CALENDAR_IDS` |   | Comma-separated calendar IDs for the `/calendar` view |
 
 The service account needs:
@@ -90,6 +91,8 @@ The service account needs:
 | `/a/:hash.ext` | GET | GCS-backed image proxy |
 | `/assets/*` | GET | Static assets (CSS, fonts, etc.) |
 | `/healthz` | GET | Health check |
+
+> Dev affordance: `/calendar?demo` renders the calendar view with fake events — useful when iterating on the design without real shares set up. Strip the branch in `routes.ts` if you don't want it shipped.
 
 ---
 
