@@ -8,9 +8,11 @@ Google Docs (edited by Loopers)
   └─ n8n — Google Drive trigger
        └─ POST /sync/:fileId  →  Cloud Run
              ├─ drive.files.export  →  text/markdown
-             ├─ strip base64 data: image strings
-             ├─ fetch real images via Drive API
-             │     └─ SHA-256 hash → upload to GCS → rewrite URL in Markdown
+             ├─ re-host every image on GCS (SHA-256 → /a/<hash>.<ext>):
+             │     ├─ inline base64 data: URIs → decoded + uploaded
+             │     ├─ remote ![md](…) and <img src="…"> → fetched via
+             │     │   Drive bearer token + uploaded
+             │     └─ leftovers (oversized/undecodable) stripped
              ├─ resolve folder path (skips the Shared Drive root —
              │   the drive itself is never a category)
              └─ upsert to Firestore (also tokenises title → keywords
@@ -25,8 +27,8 @@ Google Docs (edited by Loopers)
 |---|---|
 | 1 | n8n detects a Drive change, POSTs to `/sync/:fileId` |
 | 2 | Cloud Run calls `drive.files.export(fileId, 'text/markdown')` (or the equivalent for Slides/Sheets/Forms) → raw Markdown string |
-| 3 | Strip all `data:` base64 strings from the Markdown (storage + token limit guardrail) |
-| 4 | For each real image: fetch via Drive API → SHA-256 hash → upload to GCS at `/a/<hash>` → rewrite `src` in Markdown |
+| 3 | Re-host inline images: every base64 `data:image/…` URI (how the export embeds most pasted images) is decoded → SHA-256 hash → uploaded to GCS at `/a/<hash>.<ext>` → URL rewritten in the Markdown |
+| 4 | Re-host remote images: URLs in both `![md](…)` and `<img src="…">` form are fetched with a Drive bearer token (googleusercontent links 401 anonymously) and uploaded the same way. Any image still carrying a `data:` URI afterwards (oversized > 15 MB, undecodable) is stripped — base64 never reaches Firestore |
 | 5 | Resolve `folderPath` by walking parents; the Shared Drive root (no parents) is dropped so it never appears as a category |
 | 6 | Tokenise title → `keywords[]` and extract inline `#tags` from the body |
 | 7 | Upsert document to Firestore (see schema below). If the content hash is unchanged the write is skipped entirely — `updatedAt` always means "last real edit", and reindex sweeps stay silent |
@@ -103,7 +105,7 @@ interface KaybeeDocVersion {
 }
 ```
 
-No migrations. Fields can be added freely — Firestore is schema-free. After a code change that affects how any of these fields are computed, run `POST /reindex` to backfill. (Docs created before versioning get `version: 1` and their first snapshot on the next real content change.)
+No migrations. Fields can be added freely — Firestore is schema-free. After a code change that affects how any of these fields are computed — or how Markdown/images are processed — run `POST /reindex?force=1` to backfill: `force` bypasses the modifiedTime skip so every file is re-exported, while the content-hash check still avoids pointless version snapshots. (Docs created before versioning get `version: 1` and their first snapshot on the next real content change.)
 
 ---
 

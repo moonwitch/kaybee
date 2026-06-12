@@ -60,7 +60,9 @@ async function exportDocAsMarkdown(fileId: string): Promise<string> {
     { fileId, mimeType: 'text/markdown' },
     { responseType: 'text' },
   )
-  return stripBase64Images(response.data as string)
+  // Inline base64 images survive here on purpose — storage/assets.ts
+  // decodes and re-hosts them on GCS (and strips whatever it can't).
+  return response.data as string
 }
 
 /**
@@ -155,13 +157,6 @@ export async function resolveFolderPath(fileId: string): Promise<string> {
   }
 
   return segments.join('/') || 'Uncategorised'
-}
-
-export function stripBase64Images(markdown: string): string {
-  return markdown.replace(
-    /!\[[^\]]*\]\(data:[^;]+;base64,[^)]+\)/g,
-    '',
-  )
 }
 
 /**

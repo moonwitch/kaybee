@@ -51,6 +51,8 @@ curl -X POST \
 
 A reconciling sweep of `ROOT_FOLDER_ID`: files whose Drive `modifiedTime` hasn't moved since their last sync are **skipped** (one cheap listing instead of N exports), and docs that no longer exist in the Drive are **deleted** from Firestore together with their version history. The response reports `synced`, `skipped`, `deleted`, `failed`, and `total` — cheap enough to run every few minutes from Cloud Scheduler.
 
+Add `?force=1` to bypass the skip and re-process every file — needed once after any change to the export/image pipeline (the content-hash check still prevents junk versions).
+
 ### Trigger a single-file sync
 
 ```bash

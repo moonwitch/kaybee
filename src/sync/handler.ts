@@ -51,6 +51,10 @@ export async function syncHandler(
  * modifiedTime hasn't moved since their last sync are skipped (one cheap
  * files.list instead of N exports), and docs that no longer exist in the
  * Drive are deleted from Firestore along with their version history.
+ *
+ * `POST /reindex?force=1` bypasses the modifiedTime skip — use after a
+ * code change to the export/asset pipeline to re-process every file.
+ * (The content-hash check still prevents pointless versions.)
  */
 export async function reindexHandler(req: Request): Promise<Response> {
   if (!authorised(req)) return unauthorised('reindex')
@@ -58,7 +62,8 @@ export async function reindexHandler(req: Request): Promise<Response> {
   const rootFolderId = process.env.ROOT_FOLDER_ID
   if (!rootFolderId) return jsonError('ROOT_FOLDER_ID is not set', 500)
 
-  console.log(`[reindex] Starting sweep of ${rootFolderId}`)
+  const force = new URL(req.url).searchParams.has('force')
+  console.log(`[reindex] Starting sweep of ${rootFolderId}${force ? ' (force)' : ''}`)
   const start = Date.now()
 
   let synced = 0
@@ -79,7 +84,7 @@ export async function reindexHandler(req: Request): Promise<Response> {
       liveIds.add(entry.id)
       // Skip when Drive says the file hasn't changed since we last synced it.
       // Shortcut targets carry no modifiedTime and always re-sync.
-      if (entry.modifiedTime && state.get(entry.id) === entry.modifiedTime) {
+      if (!force && entry.modifiedTime && state.get(entry.id) === entry.modifiedTime) {
         skipped++
         continue
       }
