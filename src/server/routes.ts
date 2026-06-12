@@ -5,6 +5,8 @@ import {
   searchDocs,
   browseCategory,
   listDocsByTag,
+  listVersions,
+  getVersion,
 } from '../firestore/docs.ts'
 import { syncHandler, reindexHandler } from '../sync/handler.ts'
 import { renderMarkdown } from '../render/markdown.ts'
@@ -12,6 +14,8 @@ import { serveAsset } from '../storage/assets.ts'
 import { listUpcomingEvents, type CalendarEvent } from '../calendar/client.ts'
 import { renderHome } from './views/home.ts'
 import { renderDoc } from './views/doc.ts'
+import { renderHistory, renderDiff } from './views/history.ts'
+import { diffLines } from './lib/diff.ts'
 import { renderCalendar } from './views/calendar.ts'
 import { renderCategory } from './views/category.ts'
 import { renderTag } from './views/tag.ts'
@@ -79,6 +83,61 @@ export async function router(req: Request): Promise<Response> {
     const tag = decodeURIComponent(tagMatch[1]!).toLowerCase()
     const docs = await listDocsByTag(tag)
     return htmlResponse(renderTag(tag, docs))
+  }
+
+  // /doc/:id/history          → list of saved versions
+  // /doc/:id/v/:n             → read-only snapshot of version n
+  // /doc/:id/diff/:n          → what changed in version n (vs n-1)
+  const historyMatch = pathname.match(/^\/doc\/([^/]+)\/history$/)
+  if (historyMatch) {
+    const doc = await getDoc(historyMatch[1]!)
+    if (!doc) return notFound("That document isn't here — it may have been deleted or moved.")
+    const versions = await listVersions(doc.id)
+    return htmlResponse(renderHistory(doc, versions))
+  }
+
+  const versionMatch = pathname.match(/^\/doc\/([^/]+)\/v\/(\d+)$/)
+  if (versionMatch) {
+    const docId = versionMatch[1]!
+    const n = Number(versionMatch[2])
+    const [doc, snapshot] = await Promise.all([getDoc(docId), getVersion(docId, n)])
+    if (!doc || !snapshot) {
+      return notFound("That version isn't here — check the doc's history page.")
+    }
+    const html = await renderMarkdown(snapshot.markdown)
+    const asDoc = {
+      ...doc,
+      title: snapshot.title,
+      folderPath: snapshot.folderPath,
+      markdown: snapshot.markdown,
+      updatedAt: snapshot.savedAt,
+    }
+    return htmlResponse(
+      renderDoc(asDoc, html, {
+        viewingVersion: {
+          version: snapshot.version,
+          savedAt: snapshot.savedAt?.toDate?.() ?? new Date(),
+          currentVersion: doc.version ?? snapshot.version,
+        },
+      }),
+    )
+  }
+
+  const diffMatch = pathname.match(/^\/doc\/([^/]+)\/diff\/(\d+)$/)
+  if (diffMatch) {
+    const docId = diffMatch[1]!
+    const n = Number(diffMatch[2])
+    if (n < 2) return notFound('Version 1 is the first snapshot — there is nothing earlier to compare.')
+    const [doc, from, to] = await Promise.all([
+      getDoc(docId),
+      getVersion(docId, n - 1),
+      getVersion(docId, n),
+    ])
+    if (!doc || !from || !to) {
+      return notFound("That version isn't here — check the doc's history page.")
+    }
+    const lines = diffLines(from.markdown, to.markdown)
+    return htmlResponse(renderDiff(doc, from, to, lines))
   }
 
   const docMatch = pathname.match(/^\/doc\/([^/]+)$/)

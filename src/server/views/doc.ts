@@ -4,15 +4,41 @@ import { topbar } from '../partials/topbar.ts'
 import { footer } from '../partials/footer.ts'
 import { breadcrumb, type BreadcrumbItem } from '../partials/breadcrumb.ts'
 import { escHtml } from '../lib/html.ts'
-import { formatDate, mimeLabel, driveEditUrl } from '../lib/format.ts'
+import { formatDate, formatDateTime, mimeLabel, driveEditUrl } from '../lib/format.ts'
 
-export function renderDoc(doc: KaybeeDoc, html: string): string {
+export interface DocViewOptions {
+  /** Set when rendering an old snapshot from /doc/:id/v/:n. */
+  viewingVersion?: {
+    version: number
+    savedAt: Date
+    currentVersion: number
+  }
+}
+
+export function renderDoc(
+  doc: KaybeeDoc,
+  html: string,
+  opts: DocViewOptions = {},
+): string {
   const folder = doc.folderPath.split('/').at(-1) ?? doc.folderPath
   const updatedAt = doc.updatedAt?.toDate?.() ?? new Date()
   const tags = doc.tags ?? []
   const crumbs = buildCrumbItems(doc.folderPath, doc.title)
   const editUrl = driveEditUrl(doc.mimeType, doc.driveId)
   const editLabel = `Open in ${mimeLabel(doc.mimeType) || 'Drive'}`
+  const old = opts.viewingVersion
+
+  const versionBanner = old
+    ? `
+    <div class="version-banner">
+      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+      <span>
+        Viewing <b>version ${old.version}</b> saved ${escHtml(formatDateTime(old.savedAt))}
+        — the current page is version ${old.currentVersion}.
+      </span>
+      <a class="btn" href="/doc/${encodeURIComponent(doc.id)}">View current</a>
+    </div>`
+    : ''
 
   const body = `
 ${topbar()}
@@ -25,6 +51,10 @@ ${topbar()}
     <div class="reader-toolbar">
       <a class="btn" href="/">← Back</a>
       <div class="actions">
+        <a class="btn" href="/doc/${encodeURIComponent(doc.id)}/history">
+          <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+          History
+        </a>
         <a
           class="btn"
           href="${escHtml(editUrl)}"
@@ -36,6 +66,8 @@ ${topbar()}
         </a>
       </div>
     </div>
+
+    ${versionBanner}
 
     <article class="reader-article">
       <header class="reader-header">

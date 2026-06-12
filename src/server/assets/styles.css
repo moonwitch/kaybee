@@ -664,3 +664,60 @@ p { margin: 0; color: var(--ink-2); }
 /* Icon stroke util */
 .icon { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 
+
+/* ---------- Version history & diffs ---------- */
+.version-banner {
+  display: flex; align-items: center; gap: 10px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--yellow);
+  background: color-mix(in oklab, var(--yellow) 9%, var(--paper));
+  color: var(--ink-2);
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13.5px;
+}
+.version-banner b { color: var(--ink); }
+.version-banner .btn { margin-left: auto; flex-shrink: 0; }
+
+.version-list {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  overflow: hidden;
+  margin-top: 18px;
+}
+.version-row {
+  display: grid;
+  grid-template-columns: 52px 1fr auto auto;
+  gap: 16px; align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.version-row:last-child { border-bottom: 0; }
+.version-row:hover { background: var(--bg-elevated); }
+.version-no { color: var(--ink-3); font-size: 12.5px; font-weight: 600; }
+.version-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.version-meta .title { font-size: 14px; color: var(--ink); }
+.version-meta .sub { font-size: 12px; color: var(--ink-4); font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.version-actions { display: inline-flex; gap: 8px; }
+
+.diff {
+  margin: 18px 0 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  overflow-x: auto;
+  white-space: pre;
+}
+.diff-line { display: block; padding: 0 14px; color: var(--ink-2); }
+.diff-sign { display: inline-block; width: 18px; color: var(--ink-4); user-select: none; }
+.diff-add { background: color-mix(in oklab, var(--green) 12%, var(--paper)); color: var(--ink); }
+.diff-add .diff-sign { color: var(--green); }
+.diff-del { background: color-mix(in oklab, var(--red) 10%, var(--paper)); color: var(--ink-3); }
+.diff-del .diff-sign { color: var(--red); }
+.diff-skip { color: var(--ink-4); background: var(--bg-sunken); text-align: center; font-size: 11.5px; padding: 2px 14px; }
+.diff-stat-add { color: var(--green); font-weight: 600; }
+.diff-stat-del { color: var(--red); font-weight: 600; }

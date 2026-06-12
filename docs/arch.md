@@ -29,8 +29,9 @@ Google Docs (edited by Loopers)
 | 4 | For each real image: fetch via Drive API → SHA-256 hash → upload to GCS at `/a/<hash>` → rewrite `src` in Markdown |
 | 5 | Resolve `folderPath` by walking parents; the Shared Drive root (no parents) is dropped so it never appears as a category |
 | 6 | Tokenise title → `keywords[]` and extract inline `#tags` from the body |
-| 7 | Upsert document to Firestore (see schema below) |
-| 8 | HTML rendered from stored Markdown at serve time |
+| 7 | Upsert document to Firestore (see schema below). If the content hash is unchanged the write is skipped entirely — `updatedAt` always means "last real edit", and reindex sweeps stay silent |
+| 8 | On every real change, bump `version` and write an immutable snapshot to `docs/{id}/versions/{n}` — this powers `/doc/:id/history`, `/doc/:id/v/:n`, and the `/doc/:id/diff/:n` line-diff view |
+| 9 | HTML rendered from stored Markdown at serve time |
 
 **Target latency:** Drive edit → visible in Kaybee in under 10 seconds.
 
@@ -50,9 +51,11 @@ A second n8n workflow runs on a schedule (every 5–15 minutes). It lists all fi
 | `src/drive/indexer.ts` | Recursive Drive listing (Shared Drive scan or folder BFS); shortcut dereferencing |
 | `src/drive/exporter.ts` | `drive.files.export` call + base64 strip; folder-path resolution |
 | `src/storage/assets.ts` | Image fetch → GCS upload → URL rewrite |
-| `src/firestore/docs.ts` | Firestore read/write for documents |
+| `src/firestore/docs.ts` | Firestore read/write for documents + version snapshots |
 | `src/render/markdown.ts` | Markdown → HTML (`marked`) |
 | `src/server/routes.ts` | Page serving + search queries |
+| `src/server/lib/diff.ts` | Line diff (LCS) for the version-changes view |
+| `scripts/setup.ts` | `bun run setup` — picks a Shared Drive, writes `.env` |
 
 ---
 
@@ -68,11 +71,28 @@ interface KaybeeDoc {
   keywords: string[];   // tokenised from title; powers /search
   tags: string[];       // inline #tags extracted from the body; powers /tag/:tag
   mimeType: string;     // original Drive mime — drives the "Open in …" button
-  updatedAt: Timestamp;
+  updatedAt: Timestamp; // last content change (no-op syncs don't touch it)
+  version: number;      // monotonic content version, starts at 1
+  contentHash: string;  // SHA-256 of title|folderPath|markdown — no-op sync detection
 }
 ```
 
-No migrations. Fields can be added freely — Firestore is schema-free. After a code change that affects how any of these fields are computed, run `POST /reindex` to backfill.
+Each content change also writes an immutable snapshot to the `versions` subcollection:
+
+```ts
+// docs/{id}/versions/{000001…}  — doc id zero-padded so id order == numeric order
+interface KaybeeDocVersion {
+  version: number;
+  title: string;
+  folderPath: string;
+  markdown: string;
+  mimeType: string;
+  contentHash: string;
+  savedAt: Timestamp;
+}
+```
+
+No migrations. Fields can be added freely — Firestore is schema-free. After a code change that affects how any of these fields are computed, run `POST /reindex` to backfill. (Docs created before versioning get `version: 1` and their first snapshot on the next real content change.)
 
 ---
 
