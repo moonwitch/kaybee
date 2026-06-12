@@ -52,7 +52,7 @@ src/
 │   └── views/        # one template per route
 ├── storage/          # GCS asset upload + URL rewriting
 └── sync/             # /sync/:id + /reindex handlers
-scripts/              # one-off scripts (seed)
+scripts/              # one-off scripts (setup, seed)
 lookbook/             # design reference — see design.md
 docs/                 # agents.md, arch.md, design.md
 .github/workflows/    # Cloud Run deploy

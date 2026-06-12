@@ -68,6 +68,18 @@ Images embedded in the doc are mirrored into Kaybee automatically — you don't 
 
 ---
 
+## Version history
+
+Kaybee keeps a copy of every synced change. On any doc page, click **History** in the toolbar to see when the page changed.
+
+- **View** opens a read-only snapshot of the page as it was at that moment.
+- **Changes** shows exactly which lines were added or removed in that version, side by side with what was there before.
+- Old versions never change — you can safely link to one.
+
+This is separate from Google Docs' own version history: Kaybee records one version per *synced* change, which usually means one per editing session rather than one per keystroke. To restore an old version, copy what you need from the snapshot back into the Google Doc.
+
+---
+
 ## What renders, what doesn't
 
 | Drive file type | In Kaybee |

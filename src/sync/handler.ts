@@ -25,8 +25,18 @@ export async function syncHandler(
   try {
     const result = await syncOne(fileId)
     const ms = Date.now() - start
-    console.log(`[sync] Done fileId=${fileId} title="${result.title}" in ${ms}ms`)
-    return jsonOk({ ok: true, fileId, title: result.title, ms })
+    console.log(
+      `[sync] Done fileId=${fileId} title="${result.title}" ` +
+        `version=${result.version} changed=${result.changed} in ${ms}ms`,
+    )
+    return jsonOk({
+      ok: true,
+      fileId,
+      title: result.title,
+      version: result.version,
+      changed: result.changed,
+      ms,
+    })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error(`[sync] Error syncing fileId=${fileId}:`, err)
@@ -79,7 +89,9 @@ export async function reindexHandler(req: Request): Promise<Response> {
 /**
  * Core single-file sync pipeline shared by /sync/:id and /reindex.
  */
-async function syncOne(fileId: string): Promise<{ title: string }> {
+async function syncOne(
+  fileId: string,
+): Promise<{ title: string; version: number; changed: boolean }> {
   const meta = await getFileMeta(fileId)
 
   if (!isSupported(meta.mimeType)) {
@@ -96,7 +108,7 @@ async function syncOne(fileId: string): Promise<{ title: string }> {
   const cleaned =
     meta.mimeType === MIME.doc ? await rewriteImageUrls(markdown) : markdown
 
-  await upsertDoc({
+  const result = await upsertDoc({
     id: fileId,
     driveId: fileId,
     title: meta.title,
@@ -105,7 +117,7 @@ async function syncOne(fileId: string): Promise<{ title: string }> {
     mimeType: meta.mimeType,
   })
 
-  return { title: meta.title }
+  return { title: meta.title, ...result }
 }
 
 function authorised(req: Request): boolean {

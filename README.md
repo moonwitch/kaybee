@@ -23,12 +23,17 @@ See `docs/users.md` for the end-user guide, `docs/arch.md` for the sync pipeline
 #    (already in .gitignore — never commit it)
 cp ~/Downloads/your-sa.json ./service-account.json
 
-# 2. one-time: copy env template
-cp .env.example .env
-# edit .env — see "Environment" below
-
-# 3. install + run
+# 2. one-time: create the config from your Shared Drive
 bun install
+bun run setup
+# lists the Shared Drives the service account can see, lets you pick one,
+# previews its top-level folders (your categories), and writes .env —
+# including a generated SYNC_SECRET. Re-run any time; it keeps existing
+# values as defaults and backs the old file up to .env.bak.
+#
+# prefer doing it by hand? cp .env.example .env and see "Environment" below
+
+# 3. run
 bun dev
 # → http://localhost:8080
 
@@ -84,6 +89,9 @@ The service account needs:
 |---|---|---|
 | `/` | GET | Home — recent docs + categories |
 | `/doc/:id` | GET | Document reader |
+| `/doc/:id/history` | GET | Version history — one entry per synced content change |
+| `/doc/:id/v/:n` | GET | Read-only snapshot of version `n` |
+| `/doc/:id/diff/:n` | GET | Line diff of version `n` against `n−1` |
 | `/calendar` | GET | Upcoming events from `CALENDAR_IDS` |
 | `/search?q=` | GET | Keyword search |
 | `/sync/:fileId` | POST | Sync one file (secret-protected) |
@@ -93,6 +101,14 @@ The service account needs:
 | `/healthz` | GET | Health check |
 
 > Dev affordance: `/calendar?demo` renders the calendar view with fake events — useful when iterating on the design without real shares set up. Strip the branch in `routes.ts` if you don't want it shipped.
+
+---
+
+## Version control
+
+Every sync that actually changes a doc (title, folder, or body) bumps its `version` and stores an immutable snapshot in the `docs/{id}/versions` subcollection. Syncs that carry identical content are no-ops — `updatedAt` always means "last real edit", and scheduled reindex sweeps never pollute the history.
+
+In the UI: every doc page has a **History** button → list of versions → view any snapshot read-only, or see a collapsed line diff of what changed in each version. See `docs/arch.md` for the snapshot schema.
 
 ---
 
@@ -127,7 +143,7 @@ src/
 │   └── views/        # page templates per route
 ├── storage/          # GCS asset upload + URL rewriting
 └── sync/             # /sync and /reindex handlers
-scripts/              # one-off scripts (seed)
+scripts/              # one-off scripts (setup, seed)
 docs/                 # agents.md, arch.md, design.md
 lookbook/             # design reference (HTML mockups)
 ```

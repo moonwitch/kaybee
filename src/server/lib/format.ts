@@ -6,6 +6,13 @@ export function formatDate(d: Date): string {
   })
 }
 
+export function formatDateTime(d: Date): string {
+  return `${formatDate(d)}, ${d.toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })}`
+}
+
 export function mimeLabel(mimeType: string | undefined): string {
   switch (mimeType) {
     case 'application/vnd.google-apps.document': return 'Doc'
