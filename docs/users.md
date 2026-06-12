@@ -111,3 +111,9 @@ No — Kaybee is read-only. Click the orange "Open in …" button on any doc pag
 
 **The home page title is wrong.**
 The big title in the home hero comes from the `SHARED_DRIVE_NAME` environment variable. Your admin can change it without touching code — it takes effect on the next deploy.
+
+**Can our site have different colours?**
+Yes — each Kaybee site picks one of five palettes (warm yellow, blue, green, pink, or dark) via the `THEME` setting. Ask your admin; it's a one-line change, no code.
+
+**I deleted a doc in Drive but it's still in Kaybee.**
+Deletions are cleaned up by the scheduled sweep — give it a few minutes. If it's still there after that, ask your admin to run `/reindex`.

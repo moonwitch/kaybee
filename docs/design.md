@@ -15,6 +15,22 @@ The `/lookbook/` folder is the design authority. All visual decisions are alread
 
 ---
 
+## Themes — one palette per site
+
+Each Kaybee site (IT KB, People, …) can run its own palette. Set the `THEME` env var per deploy — no code change:
+
+| Theme | Feel |
+|---|---|
+| `sun` *(default)* | Warm yellow — the Monokai Pro Light Sun palette below |
+| `sky` | Cool blue light |
+| `meadow` | Soft green light |
+| `blossom` | Warm pink light |
+| `midnight` | Monokai Pro dark |
+
+Implementation: the bottom of `src/server/assets/styles.css` has one `body[data-theme="…"]` block per theme that overrides only the `:root` tokens — every component inherits automatically. `layout.ts` reads `THEME` and sets the attribute (`activeTheme()`); unknown values fall back to `sun`. To add a theme: copy a block, restyle the tokens, add the name to `THEMES` in `src/server/partials/layout.ts`.
+
+---
+
 ## Colour Palette — Monokai Pro Light Sun
 
 ```css
@@ -70,7 +86,9 @@ To retitle the home hero per environment, set `SHARED_DRIVE_NAME` in `.env` (loc
 **The one file to edit for all visual changes: `src/server/assets/styles.css`**
 
 ### Change the colour palette
-Open `src/server/assets/styles.css`. Edit the values inside `:root { }` at the top. Every component inherits from these variables — you only need to change them in one place.
+First check whether one of the built-in themes fits — set `THEME` in `.env` (local) or Cloud Run env vars (deploy) to `sun`, `sky`, `meadow`, `blossom`, or `midnight`. No code change.
+
+For a custom palette: open `src/server/assets/styles.css`. Edit the values inside `:root { }` at the top (or copy one of the `body[data-theme="…"]` blocks at the bottom into a new theme). Every component inherits from these variables — you only need to change them in one place.
 
 ### Change the fonts
 1. Find the `<link href="https://fonts.googleapis.com/...">` tag in `src/server/partials/layout.ts`

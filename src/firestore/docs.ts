@@ -22,6 +22,8 @@ export interface KaybeeDoc {
   version?: number
   /** SHA-256 of title|folderPath|markdown — used to skip no-op syncs. */
   contentHash?: string
+  /** Drive's RFC3339 modifiedTime at last sync — lets /reindex skip fresh files. */
+  driveModifiedTime?: string
 }
 
 /** One immutable snapshot in docs/{id}/versions/{n}. */
@@ -181,14 +183,20 @@ export async function upsertDoc(
     (prev ? hashContent(prev.title, prev.folderPath, prev.markdown) : undefined)
 
   if (prev && prevHash === contentHash) {
-    // Content untouched. Still refresh derived fields if the derivation
-    // code changed (that's what POST /reindex backfills) — but don't bump
-    // updatedAt and don't write a version.
+    // Content untouched. Still refresh derived/bookkeeping fields if stale
+    // (that's what POST /reindex backfills) — but don't bump updatedAt and
+    // don't write a version. driveModifiedTime moves on comment-only or
+    // formatting-only Drive edits; recording it keeps later sweeps cheap.
+    const patch: Partial<KaybeeDoc> = {}
     if (!sameStrings(prev.keywords, keywords) || !sameStrings(prev.tags, tags)) {
-      await ref.update({ keywords, tags, contentHash })
-    } else if (!prev.contentHash) {
-      await ref.update({ contentHash })
+      patch.keywords = keywords
+      patch.tags = tags
     }
+    if (!prev.contentHash) patch.contentHash = contentHash
+    if (doc.driveModifiedTime && prev.driveModifiedTime !== doc.driveModifiedTime) {
+      patch.driveModifiedTime = doc.driveModifiedTime
+    }
+    if (Object.keys(patch).length > 0) await ref.update(patch)
     return { changed: false, version: prev.version ?? 0 }
   }
 
@@ -207,6 +215,7 @@ export async function upsertDoc(
     mimeType: doc.mimeType,
     version,
     contentHash,
+    ...(doc.driveModifiedTime ? { driveModifiedTime: doc.driveModifiedTime } : {}),
   })
   batch.set(ref.collection(VERSIONS).doc(versionKey(version)), {
     version,
@@ -220,6 +229,34 @@ export async function upsertDoc(
   await batch.commit()
 
   return { changed: true, version }
+}
+
+/**
+ * Lightweight sync state for the reconciler: every doc id → the Drive
+ * modifiedTime recorded at its last sync. `select()` keeps the read cheap —
+ * no markdown bodies cross the wire.
+ */
+export async function listSyncState(): Promise<Map<string, string>> {
+  const snap = await db.collection(COLLECTION).select('driveModifiedTime').get()
+  const out = new Map<string, string>()
+  for (const d of snap.docs) {
+    out.set(d.id, (d.get('driveModifiedTime') as string | undefined) ?? '')
+  }
+  return out
+}
+
+/** Remove a doc and its version history (file deleted/moved out of the Drive). */
+export async function deleteDoc(id: string): Promise<void> {
+  const ref = db.collection(COLLECTION).doc(id)
+  // Subcollections aren't deleted with the parent — sweep versions first.
+  while (true) {
+    const versions = await ref.collection(VERSIONS).limit(200).get()
+    if (versions.empty) break
+    const batch = db.batch()
+    for (const v of versions.docs) batch.delete(v.ref)
+    await batch.commit()
+  }
+  await ref.delete()
 }
 
 /** Newest-first version history for a doc. */

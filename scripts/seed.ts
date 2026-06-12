@@ -5,8 +5,8 @@
  *   bun run seed
  *
  * Safe to re-run; it's an upsert keyed on `seed-welcome`.
- * Delete it once you have real content:
- *   gcloud firestore documents delete docs/seed-welcome
+ * No cleanup needed — it isn't a real Drive file, so the first
+ * POST /reindex after you have real content removes it automatically.
  */
 import { upsertDoc } from '../src/firestore/docs.ts'
 import { MIME } from '../src/drive/exporter.ts'

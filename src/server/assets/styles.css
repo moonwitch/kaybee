@@ -721,3 +721,44 @@ p { margin: 0; color: var(--ink-2); }
 .diff-skip { color: var(--ink-4); background: var(--bg-sunken); text-align: center; font-size: 11.5px; padding: 2px 14px; }
 .diff-stat-add { color: var(--green); font-weight: 600; }
 .diff-stat-del { color: var(--red); font-weight: 600; }
+
+/* ---------- Themes ----------
+   Per-site palettes, selected with the THEME env var (see layout.ts).
+   Each block only overrides the :root tokens above — every component
+   inherits automatically. Default "sun" is the :root palette itself. */
+
+/* Sky — cool blue light */
+body[data-theme="sky"] {
+  --bg: #e6effa; --bg-elevated: #f0f6fc; --bg-sunken: #d6e6f4; --paper: #fbfdff;
+  --ink: #20262e; --ink-2: #3d4651; --ink-3: #67707c; --ink-4: #91a0b0;
+  --line: rgba(32, 38, 46, 0.10); --line-strong: rgba(32, 38, 46, 0.18);
+  --red: #c94f63; --orange: #c06a2e; --yellow: #9c7a10;
+  --green: #1f8a6d; --blue: #2a6fc4; --purple: #6a5bbf;
+}
+
+/* Meadow — soft green light */
+body[data-theme="meadow"] {
+  --bg: #e8f2e0; --bg-elevated: #f1f8ec; --bg-sunken: #dbe9d0; --paper: #fbfdf7;
+  --ink: #232e20; --ink-2: #41503c; --ink-3: #6b7866; --ink-4: #97a68f;
+  --line: rgba(35, 46, 32, 0.10); --line-strong: rgba(35, 46, 32, 0.18);
+  --red: #c25055; --orange: #bd6c2a; --yellow: #997a0e;
+  --green: #2e7d4f; --blue: #2272b8; --purple: #6f58a8;
+}
+
+/* Blossom — warm pink light */
+body[data-theme="blossom"] {
+  --bg: #fae8ee; --bg-elevated: #fdf1f5; --bg-sunken: #f3d9e2; --paper: #fffbfc;
+  --ink: #2e2228; --ink-2: #4e3f47; --ink-3: #79686f; --ink-4: #a8929b;
+  --line: rgba(46, 34, 40, 0.10); --line-strong: rgba(46, 34, 40, 0.18);
+  --red: #c43a64; --orange: #c4622e; --yellow: #a36e08;
+  --green: #20836b; --blue: #2a68c0; --purple: #7551ad;
+}
+
+/* Midnight — Monokai Pro dark */
+body[data-theme="midnight"] {
+  --bg: #221f22; --bg-elevated: #2b282c; --bg-sunken: #19161a; --paper: #353136;
+  --ink: #fcfcfa; --ink-2: #d3d1d2; --ink-3: #939293; --ink-4: #727072;
+  --line: rgba(252, 252, 250, 0.10); --line-strong: rgba(252, 252, 250, 0.20);
+  --red: #ff6188; --orange: #fc9867; --yellow: #ffd866;
+  --green: #a9dc76; --blue: #78dce8; --purple: #ab9df2;
+}

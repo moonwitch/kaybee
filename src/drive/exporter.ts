@@ -112,10 +112,11 @@ export async function getFileMeta(fileId: string): Promise<{
   title: string
   parents: string[]
   mimeType: string
+  modifiedTime: string
 }> {
   const response = await drive.files.get({
     fileId,
-    fields: 'id,name,parents,mimeType',
+    fields: 'id,name,parents,mimeType,modifiedTime',
     supportsAllDrives: true,
   })
 
@@ -123,6 +124,7 @@ export async function getFileMeta(fileId: string): Promise<{
     title: response.data.name ?? 'Untitled',
     parents: response.data.parents ?? [],
     mimeType: response.data.mimeType ?? '',
+    modifiedTime: response.data.modifiedTime ?? '',
   }
 }
 

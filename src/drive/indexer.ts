@@ -15,6 +15,11 @@ export interface DriveEntry {
   name: string
   mimeType: SupportedMime
   parents: string[]
+  /**
+   * RFC3339 timestamp from Drive. Unset for shortcut targets (the shortcut's
+   * own mtime says nothing about the target), which therefore always re-sync.
+   */
+  modifiedTime?: string
 }
 
 /**
@@ -54,7 +59,7 @@ async function listEntireSharedDrive(driveId: string): Promise<DriveEntry[]> {
       await drive.files.list({
         q: 'trashed = false',
         fields:
-          'nextPageToken, files(id, name, mimeType, parents, shortcutDetails)',
+          'nextPageToken, files(id, name, mimeType, parents, modifiedTime, shortcutDetails)',
         pageSize: 1000,
         pageToken,
         corpora: 'drive',
@@ -97,7 +102,7 @@ async function walkFolderTree(rootFolderId: string): Promise<DriveEntry[]> {
         await drive.files.list({
           q: `'${folderId}' in parents and trashed = false`,
           fields:
-            'nextPageToken, files(id, name, mimeType, parents, shortcutDetails)',
+            'nextPageToken, files(id, name, mimeType, parents, modifiedTime, shortcutDetails)',
           pageSize: 1000,
           pageToken,
           corpora: 'allDrives',
@@ -149,6 +154,7 @@ function collect(file: drive_v3.Schema$File, results: DriveEntry[]): void {
     name: file.name ?? 'Untitled',
     mimeType: file.mimeType,
     parents: file.parents ?? [],
+    modifiedTime: file.modifiedTime ?? undefined,
   })
 }
 

@@ -37,9 +37,18 @@ Google Docs (edited by Loopers)
 
 ---
 
-## Reconciler (Safety Net)
+## Reconciler (built into /reindex)
 
-A second n8n workflow runs on a schedule (every 5–15 minutes). It lists all files in the Drive folder via `drive.files.list`, finds any that are missing from Firestore or have a newer `modifiedTime`, and re-triggers the sync pipeline for each. This catches any events the trigger missed — no extra code required, configured entirely in n8n.
+`POST /reindex` is a reconciling sweep, designed to run every few minutes from Cloud Scheduler (the `bun run provision` script creates the job):
+
+1. One `drive.files.list` of the whole drive + one cheap Firestore projection (`select('driveModifiedTime')` — no markdown bodies cross the wire).
+2. Files whose Drive `modifiedTime` matches what we recorded at last sync are **skipped** — no export, no Firestore write.
+3. Stale or new files go through the normal sync pipeline.
+4. Docs in Firestore that are no longer in the Drive (deleted, trashed, or moved out) are **deleted**, version history included. The `bun run seed` doc disappears this way too once real content exists.
+
+Exception: shortcut targets carry no usable `modifiedTime` (the shortcut's own mtime says nothing about the target), so they re-sync every sweep — the content-hash check in `upsertDoc` still keeps those writes no-ops.
+
+n8n (Drive trigger → `POST /sync/:fileId`) remains an optional add-on for sub-10-second latency; the scheduler sweep alone keeps the site correct.
 
 ---
 
@@ -56,6 +65,7 @@ A second n8n workflow runs on a schedule (every 5–15 minutes). It lists all fi
 | `src/server/routes.ts` | Page serving + search queries |
 | `src/server/lib/diff.ts` | Line diff (LCS) for the version-changes view |
 | `scripts/setup.ts` | `bun run setup` — picks a Shared Drive, writes `.env` |
+| `scripts/provision.ts` | `bun run provision` — builds the GCP project (APIs, Firestore, bucket, SA, Cloud Run, Scheduler, optional IAP) |
 
 ---
 
@@ -74,6 +84,7 @@ interface KaybeeDoc {
   updatedAt: Timestamp; // last content change (no-op syncs don't touch it)
   version: number;      // monotonic content version, starts at 1
   contentHash: string;  // SHA-256 of title|folderPath|markdown — no-op sync detection
+  driveModifiedTime: string; // Drive's RFC3339 mtime at last sync — /reindex skip check
 }
 ```
 

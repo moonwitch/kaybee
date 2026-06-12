@@ -1,3 +1,4 @@
+import crypto from 'node:crypto'
 import {
   exportFileAsMarkdown,
   getFileMeta,
@@ -6,7 +7,7 @@ import {
   MIME,
 } from '../drive/exporter.ts'
 import { listAllFiles } from '../drive/indexer.ts'
-import { upsertDoc } from '../firestore/docs.ts'
+import { upsertDoc, listSyncState, deleteDoc } from '../firestore/docs.ts'
 import { rewriteImageUrls } from '../storage/assets.ts'
 
 /**
@@ -45,9 +46,11 @@ export async function syncHandler(
 }
 
 /**
- * POST /reindex — full sweep of ROOT_FOLDER_ID.
- * Lists every supported file recursively and upserts each.
- * Designed for Cloud Scheduler.
+ * POST /reindex — reconciling sweep of ROOT_FOLDER_ID.
+ * Designed for Cloud Scheduler on a tight interval: files whose Drive
+ * modifiedTime hasn't moved since their last sync are skipped (one cheap
+ * files.list instead of N exports), and docs that no longer exist in the
+ * Drive are deleted from Firestore along with their version history.
  */
 export async function reindexHandler(req: Request): Promise<Response> {
   if (!authorised(req)) return unauthorised('reindex')
@@ -55,16 +58,31 @@ export async function reindexHandler(req: Request): Promise<Response> {
   const rootFolderId = process.env.ROOT_FOLDER_ID
   if (!rootFolderId) return jsonError('ROOT_FOLDER_ID is not set', 500)
 
-  console.log(`[reindex] Starting full sweep of ${rootFolderId}`)
+  console.log(`[reindex] Starting sweep of ${rootFolderId}`)
   const start = Date.now()
 
   let synced = 0
+  let skipped = 0
+  let deleted = 0
   let failed = 0
   try {
-    const entries = await listAllFiles(rootFolderId)
-    console.log(`[reindex] Found ${entries.length} supported files`)
+    const [entries, state] = await Promise.all([
+      listAllFiles(rootFolderId),
+      listSyncState(),
+    ])
+    console.log(
+      `[reindex] Found ${entries.length} supported files, ${state.size} indexed docs`,
+    )
 
+    const liveIds = new Set<string>()
     for (const entry of entries) {
+      liveIds.add(entry.id)
+      // Skip when Drive says the file hasn't changed since we last synced it.
+      // Shortcut targets carry no modifiedTime and always re-sync.
+      if (entry.modifiedTime && state.get(entry.id) === entry.modifiedTime) {
+        skipped++
+        continue
+      }
       try {
         await syncOne(entry.id)
         synced++
@@ -74,11 +92,34 @@ export async function reindexHandler(req: Request): Promise<Response> {
       }
     }
 
+    // Anything indexed but no longer in the Drive (deleted, trashed, or
+    // moved out) leaves the wiki — including the `bun run seed` doc.
+    for (const id of state.keys()) {
+      if (liveIds.has(id)) continue
+      try {
+        await deleteDoc(id)
+        deleted++
+        console.log(`[reindex] Deleted stray doc ${id}`)
+      } catch (err) {
+        failed++
+        console.error(`[reindex] Failed to delete ${id}:`, err)
+      }
+    }
+
     const ms = Date.now() - start
     console.log(
-      `[reindex] Done synced=${synced} failed=${failed} total=${entries.length} in ${ms}ms`,
+      `[reindex] Done synced=${synced} skipped=${skipped} deleted=${deleted} ` +
+        `failed=${failed} total=${entries.length} in ${ms}ms`,
     )
-    return jsonOk({ ok: true, synced, failed, total: entries.length, ms })
+    return jsonOk({
+      ok: true,
+      synced,
+      skipped,
+      deleted,
+      failed,
+      total: entries.length,
+      ms,
+    })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[reindex] Fatal:', err)
@@ -115,13 +156,19 @@ async function syncOne(
     folderPath,
     markdown: cleaned,
     mimeType: meta.mimeType,
+    driveModifiedTime: meta.modifiedTime,
   })
 
   return { title: meta.title, ...result }
 }
 
 function authorised(req: Request): boolean {
-  return req.headers.get('X-Sync-Secret') === process.env.SYNC_SECRET
+  const expected = process.env.SYNC_SECRET
+  const given = req.headers.get('X-Sync-Secret')
+  if (!expected || !given) return false
+  const a = Buffer.from(given)
+  const b = Buffer.from(expected)
+  return a.length === b.length && crypto.timingSafeEqual(a, b)
 }
 
 function unauthorised(context: string): Response {

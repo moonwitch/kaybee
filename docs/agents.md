@@ -26,7 +26,7 @@ Kaybee is a showcase project. It must sync in near-real-time, look great, and be
 | Database | Firestore (Native mode) — no SQL, no ORM, no migrations |
 | Asset storage | Cloud Storage (GCS) — content-addressed by SHA-256 |
 | Search | Firestore field queries (MVP). Vertex AI Search if needed later. |
-| Sync | n8n Drive trigger → `POST /sync/:fileId` **and/or** Cloud Scheduler → `POST /reindex` |
+| Sync | Cloud Scheduler → `POST /reindex` (reconciling sweep: skips unchanged files, deletes strays). n8n Drive trigger → `POST /sync/:fileId` optional for sub-10s latency |
 | Deployment | Cloud Run, `europe-west4` |
 | Ingestion | Google Drive API — `drive.files.export` for Docs/Slides/Sheets; Forms = link-only |
 | Calendar | Google Calendar API (read-only) |
@@ -100,6 +100,7 @@ Firestore, GCS, Drive, and Calendar authenticate implicitly via the runtime serv
 | `SYNC_SECRET` | Shared secret — validates `/sync/*` and `/reindex` |
 | `SHARED_DRIVE_NAME` | Title rendered in the home hero (optional; defaults to "Loop Library") |
 | `CALENDAR_IDS` | Comma-separated calendar IDs (optional) |
+| `THEME` | Per-site palette: sun / sky / meadow / blossom / midnight (optional; defaults to sun) |
 
 Local dev additionally needs `GOOGLE_APPLICATION_CREDENTIALS` pointing at a service-account JSON file in the repo root.
 

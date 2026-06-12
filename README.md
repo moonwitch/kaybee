@@ -49,7 +49,7 @@ curl -X POST \
   http://localhost:8080/reindex
 ```
 
-Lists every supported file under `ROOT_FOLDER_ID`, exports each one, and writes it to Firestore. Logs `synced`, `failed`, and total in the response.
+A reconciling sweep of `ROOT_FOLDER_ID`: files whose Drive `modifiedTime` hasn't moved since their last sync are **skipped** (one cheap listing instead of N exports), and docs that no longer exist in the Drive are **deleted** from Firestore together with their version history. The response reports `synced`, `skipped`, `deleted`, `failed`, and `total` — cheap enough to run every few minutes from Cloud Scheduler.
 
 ### Trigger a single-file sync
 
@@ -75,6 +75,7 @@ This is what n8n calls on every Drive change for near-instant updates.
 | `SYNC_SECRET` | ✓ | Shared secret for `/sync/*` and `/reindex` |
 | `SHARED_DRIVE_NAME` |   | Title shown in the home hero. Defaults to "Loop Library". Set per-deploy in Cloud Run. |
 | `CALENDAR_IDS` |   | Comma-separated calendar IDs for the `/calendar` view |
+| `THEME` |   | Per-site palette: `sun` (default) / `sky` / `meadow` / `blossom` / `midnight`. See `docs/design.md`. |
 
 The service account needs:
 - Drive: `drive.readonly` (and access to `ROOT_FOLDER_ID`)
@@ -114,13 +115,22 @@ In the UI: every doc page has a **History** button → list of versions → view
 
 ## Deploy
 
-Auto-deploys to Cloud Run on push to `main` via `.github/workflows/google-cloudrun-source.yml`.
+Kaybee runs **one site per GCP project** — one for the IT KB, one for People, one per team. Standing up a new site is two commands:
 
-For near-instant updates after deploy, hook either:
-- **n8n** — Drive trigger → `POST /sync/:fileId`
-- **Cloud Scheduler** — periodic `POST /reindex` (e.g. every minute) as a safety net
+```bash
+bun run setup                            # pick the Shared Drive, write .env
+bun run provision --project loop-it-kb   # build the GCP infrastructure
+```
 
-Both can run together — sync is idempotent.
+`provision` enables the APIs, creates the Firestore database, the private assets bucket, and the `kaybee-runtime` service account with minimal IAM, deploys Cloud Run from source, and creates a Cloud Scheduler job that hits `/reindex` every 5 minutes (configurable with `--schedule`). It's idempotent — re-run it after changing `.env`. Add `--iap` to put Google sign-in (Identity-Aware Proxy) in front of the site, with access managed per person or Google Group in IAM.
+
+It prints the one manual step at the end: add the service-account email as a **Viewer** on the Shared Drive.
+
+The repo also auto-deploys to Cloud Run on push to `main` via `.github/workflows/google-cloudrun-source.yml` (single-site; parametrise per site if you run several from one repo).
+
+**Sync sources** (can run together — sync is idempotent):
+- **Cloud Scheduler** — periodic `POST /reindex`. Created by `provision`; cheap because unchanged files are skipped. This is the default and is sufficient.
+- **n8n** *(optional)* — Drive trigger → `POST /sync/:fileId` for sub-10-second updates.
 
 ---
 

@@ -19,6 +19,7 @@ import crypto from 'node:crypto'
 import path from 'node:path'
 import { google, type drive_v3 } from 'googleapis'
 import type { GaxiosResponse } from 'gaxios'
+import { THEMES } from '../src/server/partials/layout.ts'
 
 const ROOT = path.join(import.meta.dir, '..')
 const ENV_PATH = path.join(ROOT, '.env')
@@ -91,6 +92,12 @@ async function main(): Promise<void> {
     existing.CALENDAR_IDS || '',
     args.yes,
   )
+  const theme = (
+    await ask(`Theme (${THEMES.join(' / ')})`, existing.THEME || 'sun', args.yes)
+  ).toLowerCase()
+  if (!(THEMES as readonly string[]).includes(theme)) {
+    info(`Unknown theme “${theme}” — the site will fall back to “sun”.`)
+  }
   const syncSecret =
     existing.SYNC_SECRET || crypto.randomBytes(24).toString('hex')
 
@@ -103,6 +110,7 @@ async function main(): Promise<void> {
     SHARED_DRIVE_NAME: chosen.name,
     SYNC_SECRET: syncSecret,
     CALENDAR_IDS: calendarIds,
+    THEME: theme,
     GOOGLE_APPLICATION_CREDENTIALS: path.relative(ROOT, keyPath),
   })
 
@@ -120,9 +128,8 @@ async function main(): Promise<void> {
        curl -X POST -H "X-Sync-Secret: ${syncSecret}" \\
          http://localhost:8080/reindex
 
-  Deploying? Set these on Cloud Run (no key file needed there):
-    GCP_PROJECT_ID, FIRESTORE_DATABASE_ID, GCS_BUCKET,
-    ROOT_FOLDER_ID, SHARED_DRIVE_NAME, SYNC_SECRET${calendarIds ? ', CALENDAR_IDS' : ''}
+  Deploying? Run \`bun run provision --project <gcp-project-id>\` to create
+  the GCP infrastructure and deploy Cloud Run with these settings.
 `)
 }
 
